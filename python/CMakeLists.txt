@@ -11,6 +11,9 @@ set(DIRECTIONAL_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 nanobind_add_module(_directional
     src/module.cpp
+    src/bind_mesh.cpp
+    src/bind_tangent_bundle.cpp
+    src/bind_field.cpp
 )
 target_include_directories(_directional PRIVATE
     "${DIRECTIONAL_ROOT}/include"
