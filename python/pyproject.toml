@@ -1,0 +1,17 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "nanobind>=2.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "directional"
+version = "0.1.0"
+description = "Python bindings for Directional, a directional-field processing library"
+requires-python = ">=3.9"
+dependencies = ["numpy"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.scikit-build]
+wheel.packages = ["directional"]
+build-dir = "build/{wheel_tag}"
