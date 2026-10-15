@@ -48,3 +48,12 @@ def test_power_field_matches_cpp(cpp_reference, tmp_path, bundleName, TangentBun
     dr.write_raw_field(str(tmp_path / "py.rawfield"), rawField, True)
     for otherField in (cppField, dr.read_raw_field(str(tmp_path / "py.rawfield"), tb)):
         assert_matches(otherField.extField, rawField.extField)
+
+
+def test_read_singularities_matches_cpp(cpp_reference):
+    cpp = cpp_reference("read_singularities")
+    mesh = dr.readOFF(str(TUTORIAL_DATA_PATH / "bumpy.off"))
+    field = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "bumpy.rawfield"), dr.PCFaceTangentBundle(mesh))
+    dr.read_singularities(str(TUTORIAL_DATA_PATH / "bumpy.sings"), field)
+    assert_matches(field.singLocalCycles, cpp("singLocalCycles"))
+    assert_matches(field.singIndices, cpp("singIndices"))

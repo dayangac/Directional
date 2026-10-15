@@ -13,6 +13,7 @@
 #include <directional/power_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/read_raw_field.h>
+#include <directional/read_singularities.h>
 #include <directional/write_raw_field.h>
 #include "utils.h"
 
@@ -108,7 +109,18 @@ void bind_field(nb::module_& m)
         return field;
     }, "fileName"_a, "tb"_a, nb::keep_alive<0, 2>());
 
-    m.def("write_raw_field", [](const std::string& fileName, const CartesianField& rawField, const bool high_precision){
+    //read_singularities() only asserts that the degree matches the field, so the header is checked first.
+    m.def("read_singularities", [](const std::string& fileName, CartesianField& field){
+        int N;
+        std::ifstream header(fileName);
+        if (!(header >> N))
+            throw std::runtime_error("could not read " + fileName);
+        require(N==field.N, "the file's degree does not match the field");
+        if (!directional::read_singularities(fileName, field))
+            throw std::runtime_error("could not read " + fileName);
+    }, "fileName"_a, "field"_a);
+
+    m.def("write_raw_field",[](const std::string& fileName, const CartesianField& rawField, const bool high_precision){
         if (!directional::write_raw_field(fileName, rawField, high_precision))
             throw std::runtime_error("could not write " + fileName);
     }, "fileName"_a, "rawField"_a, "high_precision"_a=false);

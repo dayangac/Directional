@@ -173,6 +173,30 @@ def test_raw_field_file_roundtrip(sphere, tmp_path):
     np.testing.assert_allclose(loadedField.extField, rawField.extField, atol=1e-12)
 
 
+def test_read_singularities_matches_principal_matching():
+    mesh = dr.readOFF(str(TUTORIAL_DATA_PATH / "bumpy.off"))
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "bumpy.rawfield"), dr.PCFaceTangentBundle(mesh))
+    dr.read_singularities(str(TUTORIAL_DATA_PATH / "bumpy.sings"), rawField)
+    singElements, singIndices = np.loadtxt(TUTORIAL_DATA_PATH / "bumpy.sings", skiprows=1, dtype=int).T
+    np.testing.assert_array_equal(rawField.singLocalCycles, singElements)
+    np.testing.assert_array_equal(rawField.singIndices, singIndices)
+
+    dr.principal_matching(rawField)
+    order = np.argsort(rawField.singLocalCycles)
+    np.testing.assert_array_equal(rawField.singLocalCycles[order], np.sort(singElements))
+    np.testing.assert_array_equal(rawField.singIndices[order], singIndices[np.argsort(singElements)])
+
+
+def test_read_singularities_rejects_other_degree(sphere, tmp_path):
+    fileName = tmp_path / "field.sings"
+    fileName.write_text(f"{N+1} 1\n0 1\n")
+    rawField = dr.CartesianField(dr.PCFaceTangentBundle(sphere), dr.fieldTypeEnum.RAW_FIELD, N)
+    with pytest.raises(ValueError):
+        dr.read_singularities(str(fileName), rawField)
+    with pytest.raises(RuntimeError):
+        dr.read_singularities(str(tmp_path / "missing.sings"), rawField)
+
+
 def test_read_raw_field_missing_file(sphere):
     with pytest.raises(RuntimeError):
         dr.read_raw_field(str(TUTORIAL_DATA_PATH / "missing.rawfield"), dr.PCFaceTangentBundle(sphere))

@@ -48,7 +48,7 @@ bool inline read_singularities(const std::string &fileName,
             f >> singElements.coeffRef(i)>> singIndices.coeffRef(i);
         
         f.close();
-        return f.fail();
+        return !f.fail();
     }
     catch (std::exception e)
     {
@@ -77,7 +77,7 @@ bool inline read_singularities(const std::string &fileName,
         
         f.close();
         field.set_singularities(singElements, singIndices);
-        return f.fail();
+        return !f.fail();
     }
     catch (std::exception e)
     {
