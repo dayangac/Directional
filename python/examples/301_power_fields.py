@@ -1,4 +1,10 @@
-"""Port of tutorial/301_PowerFields: click on the mesh to constrain the nearest vertex."""
+# This file is part of Directional, a library for directional field processing.
+#
+# This Source Code Form is subject to the terms of the Mozilla Public License
+# v. 2.0. If a copy of the MPL was not distributed with this file, You can
+# obtain one at http://mozilla.org/MPL/2.0/.
+
+# Python port of tutorial/301_PowerFields: click on the mesh to constrain the nearest vertex.
 from pathlib import Path
 
 import numpy as np
@@ -7,56 +13,76 @@ import polyscope.imgui as psim
 
 import directional as dr
 
+TUTORIAL_DATA_PATH = Path(__file__).parents[2] / "tutorial" / "data"
+
 N = 4
-DATA = Path(__file__).parents[2] / "tutorial" / "data"
+normalizeField = False
+viewFieldHard = True
 
-mesh = dr.readOBJ(str(DATA / "rocker-arm2500.obj"))
+mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "rocker-arm2500.obj"))
 vtb = dr.IntrinsicVertexTangentBundle(mesh)
-const_vertices, const_vectors = [], []
-normalize_field, view_hard = False, 0
+constVertices = np.empty(0, dtype=int)
+constVectors = np.empty((0, 3))
+alignWeights = np.empty(0)
 
 
-def update():
-    weight = -1.0 if view_hard == 0 else 10e-4
-    power = dr.power_field(vtb, np.array(const_vertices, dtype=int), np.array(const_vectors).reshape(-1, 3),
-                           np.full(len(const_vertices), weight), N, normalize_field)
-    raw = dr.power_to_raw(power, N)
-    dr.principal_matching(raw)
+def recompute_field():
+    global powerFieldHard, powerFieldSoft
+    powerFieldHard = dr.power_field(vtb, constVertices, constVectors, np.full(constVertices.size, -1.0), N, normalizeField)
+    powerFieldSoft = dr.power_field(vtb, constVertices, constVectors, alignWeights, N, normalizeField)
+
+
+def update_visualization():
+    rawField = dr.power_to_raw(powerFieldHard if viewFieldHard else powerFieldSoft, N)
+    dr.principal_matching(rawField)
 
     for i in range(N):
-        ps_mesh.add_vector_quantity(f"Vector {i}", raw.extField[:, 3 * i:3 * i + 3], enabled=True)
-    sings = ps.register_point_cloud("Singularities", mesh.barycenters[raw.singLocalCycles])
-    sings.add_scalar_quantity("index", raw.singIndices / N, enabled=True, cmap="coolwarm", vminmax=(-1, 1))
-    if const_vertices:
-        constraints = ps.register_point_cloud("Constraints", mesh.V[const_vertices], color=(1, 1, 0))
-        constraints.add_vector_quantity("direction", np.array(const_vectors), enabled=True, color=(1, 1, 0))
+        psMesh.add_vector_quantity("Vector " + str(i), rawField.extField[:, 3*i:3*i+3], enabled=True)
+    psSings = ps.register_point_cloud("Singularities", mesh.barycenters[rawField.singLocalCycles])
+    psSings.add_scalar_quantity("index", rawField.singIndices/N, enabled=True, cmap="coolwarm", vminmax=(-1, 1))
+
+    if constVertices.size>0:
+        psConstraints = ps.register_point_cloud("Constraints", mesh.V[constVertices], color=(1, 1, 0))
+        psConstraints.add_vector_quantity("Constraints", constVectors, enabled=True, color=(1, 1, 0))
 
 
-def callback():
-    global normalize_field, view_hard
-    changed, normalize_field = psim.Checkbox("Normalize Field", normalize_field)
-    combo_changed, view_hard = psim.Combo("Viewing mode", view_hard, ["Hard prescription", "Soft prescription"])
-    if changed or combo_changed:
-        update()
+def callbackFunc():
+    global normalizeField, viewFieldHard, constVertices, constVectors, alignWeights
+
+    changed, normalizeField = psim.Checkbox("Normalize Field", normalizeField)
+    if changed:
+        recompute_field()
+        update_visualization()
+
+    changed, currentItem = psim.Combo("Viewing mode", 0 if viewFieldHard else 1, ["Hard prescription", "Soft prescription"])
+    if changed:
+        viewFieldHard = (currentItem==0)
+        update_visualization()
 
     if psim.IsMouseClicked(0) and not psim.GetIO().WantCaptureMouse:
-        pick = ps.pick(screen_coords=psim.GetMousePos())
-        if pick.is_hit and pick.structure_name == "mesh" and "bary_coords" in pick.structure_data:
-            face = mesh.F[pick.structure_data["index"]]
-            vertex = int(face[np.argmax(pick.structure_data["bary_coords"])])
-            vector = pick.position - mesh.V[vertex]
-            vector /= np.linalg.norm(vector)
-            if vertex in const_vertices:
-                const_vectors[const_vertices.index(vertex)] = vector
-            else:
-                const_vertices.append(vertex)
-                const_vectors.append(vector)
-            update()
+        pickResult = ps.pick(screen_coords=psim.GetMousePos())
+        if pickResult.is_hit and pickResult.structure_name=="Mesh" and "bary_coords" in pickResult.structure_data:
+            currF = pickResult.structure_data["index"]
+            currVertex = int(mesh.F[currF, np.argmax(pickResult.structure_data["bary_coords"])])
+
+            i = np.flatnonzero(constVertices==currVertex)
+            if i.size==0:
+                constVertices = np.append(constVertices, currVertex)
+                constVectors = np.vstack([constVectors, np.zeros(3)])
+                alignWeights = np.append(alignWeights, 10e-4 if alignWeights.size==0 else alignWeights[-1])
+                i = constVertices.size-1
+
+            constVector = pickResult.position-mesh.V[currVertex]
+            constVectors[i] = constVector/np.linalg.norm(constVector)
+
+            recompute_field()
+            update_visualization()
 
 
 ps.init()
-ps_mesh = ps.register_surface_mesh("mesh", mesh.V, mesh.F)
-ps_mesh.set_selection_mode("faces_only")
-update()
-ps.set_user_callback(callback)
+psMesh = ps.register_surface_mesh("Mesh", mesh.V, mesh.F)
+psMesh.set_selection_mode("faces_only")
+ps.set_user_callback(callbackFunc)
+recompute_field()
+update_visualization()
 ps.show()
