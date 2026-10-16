@@ -67,6 +67,20 @@ def test_bundle_spaces(sphere, TangentBundle):
     numSpaces = len(sphere.F) if TangentBundle is dr.PCFaceTangentBundle else len(sphere.V)
     assert tb.numSpaces==numSpaces
     assert tb.sources.shape==tb.normals.shape==(numSpaces, 3)
+    assert tb.avgAdjLength==pytest.approx(sphere.avgEdgeLength)
+
+
+def test_field_refers_to_its_bundle(sphere):
+    ftb = dr.PCFaceTangentBundle(sphere)
+    rawField = dr.power_to_raw(dr.power_field(ftb, *NO_CONSTRAINTS, N), N)
+    assert rawField.tb is ftb
+    assert isinstance(dr.CartesianField(dr.IntrinsicVertexTangentBundle(sphere), dr.fieldTypeEnum.RAW_FIELD, N).tb,
+                      dr.IntrinsicVertexTangentBundle)
+
+
+def test_bundle_cycles_are_dual_elements(sphere):
+    np.testing.assert_array_equal(dr.PCFaceTangentBundle(sphere).cycleSources, sphere.V)
+    np.testing.assert_array_equal(dr.IntrinsicVertexTangentBundle(sphere).cycleSources, sphere.barycenters)
 
 
 def test_hard_constraints_are_met(sphere):

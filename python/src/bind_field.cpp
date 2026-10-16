@@ -46,6 +46,7 @@ void bind_field(nb::module_& m)
         new (field) CartesianField();
         field->init(tb, fieldType, N);
     }, "tb"_a, "fieldType"_a, "N"_a, nb::keep_alive<1, 2>())
+    .def_prop_ro("tb", [](const CartesianField& field){ return field.tb; }, nb::rv_policy::reference)
     .def_ro("N", &CartesianField::N)
     .def_ro("fieldType", &CartesianField::fieldType)
     .def_prop_ro("intField", view(&CartesianField::intField), nb::rv_policy::reference_internal)

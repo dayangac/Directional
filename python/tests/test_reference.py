@@ -80,3 +80,11 @@ def test_streamlines_match_cpp(cpp_reference):
         dr.streamlines_next(data, state, 0.5*mesh.avgEdgeLength)
     for array, value in (("samplePoints", data.samplePoints), ("segStart", state.segStart), ("segEnd", state.segEnd)):
         assert_matches(value, cpp(array))
+
+
+@pytest.mark.parametrize("bundleName, TangentBundle", [("face", dr.PCFaceTangentBundle), ("vertex", dr.IntrinsicVertexTangentBundle)])
+def test_bundle_matches_cpp(cpp_reference, bundleName, TangentBundle):
+    cpp = cpp_reference("bundle")
+    tb = TangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj")))
+    for name in ("sources", "normals", "cycleSources", "avgAdjLength"):
+        assert_matches(getattr(tb, name), cpp(bundleName + "_" + name))
