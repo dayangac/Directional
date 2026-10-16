@@ -237,8 +237,8 @@ inline void directional::streamlines_init(const directional::CartesianField& fie
     } else {
         data.sampleFaces=seedFaces;
         Eigen::MatrixXd BC_sample;
-        Eigen::VectorXi one(1); one(0)=1;
-        directional::matrix_slice(data.slMesh->barycenters, data.sampleFaces, one, data.samplePoints);
+        Eigen::VectorXi three(3); three<<0,1,2;
+        directional::matrix_slice(data.slMesh->barycenters, data.sampleFaces, three, data.samplePoints);
         
     }
     //nsamples = data.nsample = data.sampleFaces.size();
