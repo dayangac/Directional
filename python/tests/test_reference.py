@@ -65,3 +65,18 @@ def test_principal_curvatures_match_cpp(cpp_reference):
     for currMesh in (mesh, dr.TriMesh(mesh.V, mesh.F)):
         for name in ("minVertexPrincipalDirections", "maxVertexPrincipalDirections", "vertexPrincipalCurvatures"):
             assert_matches(getattr(currMesh, name), cpp(name))
+
+
+#automatic seeds are left out, since they are random on every run
+def test_streamlines_match_cpp(cpp_reference):
+    cpp = cpp_reference("streamlines")
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj"))
+    ftb = dr.PCFaceTangentBundle(mesh)
+    constVectors = (mesh.V[mesh.F[0, 1]]-mesh.V[mesh.F[0, 0]]).reshape(1, 3)
+    rawField = dr.power_to_raw(dr.power_field(ftb, np.array([0]), constVectors, np.array([-1.0]), 3), 3, normalize=True)
+    data, state = dr.StreamlineData(), dr.StreamlineState()
+    dr.streamlines_init(rawField, np.array([0, 10, 500]), 3.0, data, state)
+    for i in range(3):
+        dr.streamlines_next(data, state, 0.5*mesh.avgEdgeLength)
+    for array, value in (("samplePoints", data.samplePoints), ("segStart", state.segStart), ("segEnd", state.segEnd)):
+        assert_matches(value, cpp(array))
