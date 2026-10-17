@@ -12,6 +12,7 @@ import polyscope as ps
 import polyscope.imgui as psim
 
 import directional as dr
+import directional.viewer as viewer
 
 TUTORIAL_DATA_PATH = Path(__file__).parents[2] / "tutorial" / "data"
 
@@ -36,14 +37,9 @@ def update_visualization():
     rawField = dr.power_to_raw(powerFieldHard if viewFieldHard else powerFieldSoft, N)
     dr.principal_matching(rawField)
 
-    for i in range(N):
-        psMesh.add_vector_quantity("Vector " + str(i), rawField.extField[:, 3*i:3*i+3], enabled=True)
-    psSings = ps.register_point_cloud("Singularities", mesh.barycenters[rawField.singLocalCycles])
-    psSings.add_scalar_quantity("index", rawField.singIndices/N, enabled=True, cmap="coolwarm", vminmax=(-1, 1))
-
+    viewer.set_cartesian_field(rawField, "Power field")
     if constVertices.size>0:
-        psConstraints = ps.register_point_cloud("Constraints", mesh.V[constVertices], color=(1, 1, 0))
-        psConstraints.add_vector_quantity("Constraints", constVectors, enabled=True, color=(1, 1, 0))
+        viewer.set_raw_field(mesh.V[constVertices], constVectors, "Constraints", 0.3*vtb.avgAdjLength, viewer.DEFAULT_VECTOR_CONSTRAINT_COLOR)
 
 
 def callbackFunc():
@@ -80,7 +76,7 @@ def callbackFunc():
 
 
 ps.init()
-psMesh = ps.register_surface_mesh("Mesh", mesh.V, mesh.F)
+psMesh = viewer.set_surface_mesh(mesh)
 psMesh.set_selection_mode("faces_only")
 ps.set_user_callback(callbackFunc)
 recompute_field()

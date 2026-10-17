@@ -10,6 +10,7 @@ import polyscope as ps
 
 DEFAULT_FACE_COLOR = (243.0/255.0, 241.0/255.0, 216.0/255.0)
 DEFAULT_GLYPH_COLOR = (0.05, 0.05, 1.0)
+DEFAULT_VECTOR_CONSTRAINT_COLOR = (1.0, 1.0, 0.2)
 #singularity colors for indices -3..3 (the index 0 color is the face color); lower is black, higher is white
 INDEX_COLORS = {-3: (1.0, 1.0, 0.0), -2: (1.0, 0.5, 0.0), -1: (1.0, 0.0, 0.0), 0: DEFAULT_FACE_COLOR,
                 1: (0.0, 1.0, 0.0), 2: (0.0, 1.0, 0.5), 3: (0.0, 1.0, 1.0)}
