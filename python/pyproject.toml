@@ -10,7 +10,8 @@ requires-python = ">=3.9"
 dependencies = ["numpy"]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "polyscope"]
+viewer = ["polyscope"]
 
 [tool.scikit-build]
 wheel.packages = ["directional"]
