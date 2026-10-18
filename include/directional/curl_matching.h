@@ -81,7 +81,7 @@ inline void curl_matching(directional::CartesianField& rawField,
             //RowVector3d vecjf = rawField.extField.block(rawField.adjSpaces(i, 0), 3*j, 1, 3);
             RowVector2d vecjf = rawField.intField.block(ftb->adjSpaces(i, 0), 2 * j, 1, 2);
             Complex vecjfc = Complex(vecjf(0),vecjf(1));
-            RowVector2d vecjg = rawField.intField.block(ftb->adjSpaces(i, 1), 2 * (rawField.matching(i)+j+rawField.N)%rawField.N, 1, 2);
+            RowVector2d vecjg = rawField.intField.block(ftb->adjSpaces(i, 1), 2 * ((rawField.matching(i)+j+rawField.N)%rawField.N), 1, 2);
             Complex vecjgc = Complex(vecjg(0),vecjg(1));
             Complex transvecjfc = vecjfc*ftb->connection(i);
             freeCoeff *= (vecjgc / transvecjfc);

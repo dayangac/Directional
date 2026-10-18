@@ -40,3 +40,11 @@ def test_principal_curvatures_match_analytic_torus(torus):
     #tolerances cover the discretization error of the 576-vertex mesh (measured 0.19 and 12%)
     np.testing.assert_allclose(torus.vertexPrincipalCurvatures[:, 0], cosTheta/rho, atol=0.25)
     np.testing.assert_allclose(torus.vertexPrincipalCurvatures[:, 1], 1/r, rtol=0.15)
+
+
+def test_readDMAT():
+    constFaces = dr.readDMAT(str(TUTORIAL_DATA_PATH / "spheres_constFaces.dmat"))
+    assert constFaces.shape==(98, 1)
+    assert constFaces[0, 0]==9
+    with pytest.raises(RuntimeError):
+        dr.readDMAT(str(TUTORIAL_DATA_PATH / "missing.dmat"))

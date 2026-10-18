@@ -33,7 +33,8 @@ void bind_tangent_bundle(nb::module_& m)
     .def_ro("avgAdjLength", &TangentBundle::avgAdjLength)
     .def_prop_ro("sources", view(&TangentBundle::sources), nb::rv_policy::reference_internal)
     .def_prop_ro("normals", view(&TangentBundle::normals), nb::rv_policy::reference_internal)
-    .def_prop_ro("cycleSources", view(&TangentBundle::cycleSources), nb::rv_policy::reference_internal);
+    .def_prop_ro("cycleSources", view(&TangentBundle::cycleSources), nb::rv_policy::reference_internal)
+    .def_prop_ro("cycleCurvatures", view(&TangentBundle::cycleCurvatures), nb::rv_policy::reference_internal);
 
     bind_bundle<directional::PCFaceTangentBundle>(m, "PCFaceTangentBundle");
     bind_bundle<directional::IntrinsicVertexTangentBundle>(m, "IntrinsicVertexTangentBundle");

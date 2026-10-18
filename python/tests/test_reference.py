@@ -86,5 +86,9 @@ def test_streamlines_match_cpp(cpp_reference):
 def test_bundle_matches_cpp(cpp_reference, bundleName, TangentBundle):
     cpp = cpp_reference("bundle")
     tb = TangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj")))
-    for name in ("sources", "normals", "cycleSources", "avgAdjLength"):
+    for name in ("sources", "normals", "cycleSources", "avgAdjLength", "cycleCurvatures"):
         assert_matches(getattr(tb, name), cpp(bundleName + "_" + name))
+
+
+def test_readDMAT_matches_cpp(cpp_reference):
+    assert_matches(dr.readDMAT(str(TUTORIAL_DATA_PATH / "spheres_constFaces.dmat")), cpp_reference("read_dmat")("dmat"))

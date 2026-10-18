@@ -83,6 +83,11 @@ def test_bundle_cycles_are_dual_elements(sphere):
     np.testing.assert_array_equal(dr.IntrinsicVertexTangentBundle(sphere).cycleSources, sphere.barycenters)
 
 
+def test_cycle_curvatures_sum_to_euler_characteristic(sphere):
+    for TangentBundle in (dr.PCFaceTangentBundle, dr.IntrinsicVertexTangentBundle):
+        assert np.sum(TangentBundle(sphere).cycleCurvatures)==pytest.approx(2.0*np.pi*sphere.eulerChar)
+
+
 def test_hard_constraints_are_met(sphere):
     constFaces = np.array([0, 100, 500])
     constVectors = sphere.V[sphere.F[constFaces, 1]]-sphere.V[sphere.F[constFaces, 0]]

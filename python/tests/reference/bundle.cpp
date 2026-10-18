@@ -16,6 +16,7 @@ void write_bundle(const std::string& outDir, const std::string& name, const dire
     write(outDir, name + "_normals", tb.normals);
     write(outDir, name + "_cycleSources", tb.cycleSources);
     write(outDir, name + "_avgAdjLength", tb.avgAdjLength);
+    write(outDir, name + "_cycleCurvatures", tb.cycleCurvatures);
 }
 
 int main(int argc, char** argv)

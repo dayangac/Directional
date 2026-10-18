@@ -10,6 +10,7 @@
 #include <directional/TriMesh.h>
 #include <directional/readOBJ.h>
 #include <directional/readOFF.h>
+#include <directional/readDMAT.h>
 #include "utils.h"
 
 namespace nb = nanobind;
@@ -52,4 +53,10 @@ void bind_mesh(nb::module_& m)
 
     m.def("readOBJ", &read_mesh<directional::readOBJ>, "fileName"_a);
     m.def("readOFF", &read_mesh<directional::readOFF>, "fileName"_a);
+    m.def("readDMAT", [](const std::string& fileName){
+        Eigen::MatrixXd dmat;
+        if (!directional::readDMAT(fileName, dmat))
+            throw std::runtime_error("could not read " + fileName);
+        return dmat;
+    }, "fileName"_a);
 }
