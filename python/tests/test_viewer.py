@@ -67,3 +67,27 @@ def test_streamline_width_is_absolute():
     dr.streamlines_init(rawField, np.array([0, 10]), 3.0, data, state)
     dr.streamlines_next(data, state, 0.5*mesh.avgEdgeLength)
     assert viewer.set_streamlines(state, width=0.01).get_radius()==pytest.approx(0.01)
+
+
+def test_combed_colors_follow_sign_symmetry():
+    assert viewer.indexed_glyph_colors(2, 4)==viewer.indexed_glyph_colors(0, 4)
+    assert viewer.indexed_glyph_colors(2, 4, signSymmetry=False)!=viewer.indexed_glyph_colors(0, 4, signSymmetry=False)
+    assert viewer.indexed_glyph_colors(2, 3)!=viewer.indexed_glyph_colors(0, 3)
+
+
+def test_raw_field_accepts_a_color_per_vector(rawField):
+    viewer.set_raw_field(rawField.tb.sources, rawField.extField, "Combed", color=[viewer.indexed_glyph_colors(i, N) for i in range(N)])
+
+
+def test_explicit_singularities(rawField):
+    psSings = viewer.set_singularities(rawField, "Prescribed", singElements=np.array([3, 5, 8]), singIndices=np.array([1, -1, 2]))
+    assert psSings.n_points()==3
+
+
+def test_highlights():
+    mesh = dr.readOFF(str(TUTORIAL_DATA_PATH / "bumpy.off"))
+    viewer.set_surface_mesh(mesh)
+    viewer.highlight_faces(np.array([0, 4]))
+    psSeams = viewer.highlight_edges(mesh, np.array([1, 2, 7]))
+    assert psSeams.n_edges()==3
+    assert psSeams.get_radius()==pytest.approx(0.05*mesh.avgEdgeLength)
