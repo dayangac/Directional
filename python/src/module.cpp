@@ -13,6 +13,7 @@ void bind_tangent_bundle(nb::module_& m);
 void bind_field(nb::module_& m);
 void bind_streamlines(nb::module_& m);
 void bind_matching(nb::module_& m);
+void bind_polyvector(nb::module_& m);
 
 NB_MODULE(_directional, m)
 {
@@ -21,4 +22,5 @@ NB_MODULE(_directional, m)
     bind_field(m);
     bind_streamlines(m);
     bind_matching(m);
+    bind_polyvector(m);
 }
