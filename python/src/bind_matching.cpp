@@ -8,10 +8,12 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/pair.h>
 #include <directional/CartesianField.h>
 #include <directional/PCFaceTangentBundle.h>
 #include <directional/combing.h>
 #include <directional/curl_matching.h>
+#include <directional/index_prescription.h>
 #include "utils.h"
 
 namespace nb = nanobind;
@@ -44,4 +46,14 @@ void bind_matching(nb::module_& m)
         directional::curl_matching(rawField, curlNorm);
         return curlNorm;
     }, "rawField"_a);
+
+    //Returns (rotationAngles, linfError).
+    m.def("index_prescription", [](const Eigen::VectorXi& cycleIndices, const int N, const double globalRotation, CartesianField& field){
+        require(N>0, "N must be positive");
+        require(cycleIndices.size()==field.tb->cycles.rows(), "cycleIndices must have an index per cycle of the tangent bundle");
+        Eigen::VectorXd rotationAngles;
+        double linfError;
+        directional::index_prescription(cycleIndices, N, globalRotation, field, rotationAngles, linfError);
+        return std::make_pair(rotationAngles, linfError);
+    }, "cycleIndices"_a, "N"_a, "globalRotation"_a, "field"_a);
 }

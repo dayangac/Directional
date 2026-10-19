@@ -92,3 +92,29 @@ def test_bundle_matches_cpp(cpp_reference, bundleName, TangentBundle):
 
 def test_readDMAT_matches_cpp(cpp_reference):
     assert_matches(dr.readDMAT(str(TUTORIAL_DATA_PATH / "spheres_constFaces.dmat")), cpp_reference("read_dmat")("dmat"))
+
+
+def test_combing_and_curl_matching_match_cpp(cpp_reference):
+    cpp = cpp_reference("matching")
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "lilium.obj"))
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "lilium.rawfield"), dr.PCFaceTangentBundle(mesh))
+    dr.principal_matching(rawField)
+    combedField = dr.combing(rawField)
+    curlNorm = dr.curl_matching(rawField)
+    for name, field in (("combed", combedField), ("curl", rawField)):
+        for array in ("extField", "matching", "singLocalCycles", "singIndices"):
+            assert_matches(getattr(field, array), cpp(name + "_" + array))
+    assert_matches(rawField.effort, cpp("curl_effort"))
+    assert_matches(curlNorm, cpp("curl_curlNorm"))
+
+
+def test_index_prescription_matches_cpp(cpp_reference):
+    cpp = cpp_reference("index_prescription")
+    ftb = dr.PCFaceTangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj")))
+    field = dr.CartesianField(ftb, dr.fieldTypeEnum.RAW_FIELD, 2)
+    cycleIndices = np.zeros(len(ftb.cycleCurvatures), dtype=int)
+    cycleIndices[[35, 36]] = 2
+    rotationAngles, linfError = dr.index_prescription(cycleIndices, 2, np.pi/16.0, field)
+    assert_matches(field.extField, cpp("extField"))
+    assert_matches(rotationAngles, cpp("rotationAngles"))
+    assert_matches(linfError, cpp("linfError"))

@@ -84,3 +84,44 @@ def test_curl_matching_rejects_bad_input(sphere, lilium):
     with pytest.raises(ValueError):
         dr.curl_matching(vertexField)
 
+
+@pytest.fixture
+def prescribedField(sphere):
+    return dr.CartesianField(dr.PCFaceTangentBundle(sphere), dr.fieldTypeEnum.RAW_FIELD, 2)
+
+
+def prescribed_indices(field, singCycles, singIndices):
+    cycleIndices = np.zeros(len(field.tb.cycleCurvatures), dtype=int)
+    cycleIndices[singCycles] = singIndices
+    return cycleIndices
+
+
+def test_index_prescription_places_singularities(sphere, prescribedField):
+    rotationAngles, linfError = dr.index_prescription(prescribed_indices(prescribedField, [35, 36], [2, 2]), 2, 0.0, prescribedField)
+    assert linfError<1e-8
+    assert rotationAngles.shape==(len(sphere.EV),)
+    dr.principal_matching(prescribedField)
+    np.testing.assert_array_equal(prescribedField.singLocalCycles, [35, 36])
+    np.testing.assert_array_equal(prescribedField.singIndices, [2, 2])
+
+
+def test_index_prescription_reports_inconsistent_indices(prescribedField):
+    _, linfError = dr.index_prescription(prescribed_indices(prescribedField, [], []), 2, 0.0, prescribedField)
+    assert linfError>0.1
+
+
+#globalRotation is the angle of the power vector u^N, so every directional rotates by globalRotation/N.
+def test_index_prescription_global_rotation(prescribedField):
+    cycleIndices = prescribed_indices(prescribedField, [35, 36], [2, 2])
+    dr.index_prescription(cycleIndices, 2, 0.0, prescribedField)
+    unrotated = prescribedField.intField[:, 0]+1j*prescribedField.intField[:, 1]
+    dr.index_prescription(cycleIndices, 2, np.pi/8.0, prescribedField)
+    rotated = prescribedField.intField[:, 0]+1j*prescribedField.intField[:, 1]
+    np.testing.assert_allclose((rotated/unrotated)**2, np.exp(1j*np.pi/8.0), atol=1e-8)
+
+
+def test_index_prescription_rejects_bad_input(prescribedField):
+    with pytest.raises(ValueError):
+        dr.index_prescription(np.zeros(3, dtype=int), 2, 0.0, prescribedField)
+    with pytest.raises(ValueError):
+        dr.index_prescription(prescribed_indices(prescribedField, [], []), 0, 0.0, prescribedField)
