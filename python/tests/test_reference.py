@@ -118,3 +118,43 @@ def test_index_prescription_matches_cpp(cpp_reference):
     assert_matches(field.extField, cpp("extField"))
     assert_matches(rotationAngles, cpp("rotationAngles"))
     assert_matches(linfError, cpp("linfError"))
+
+
+def pv_data(ftb, mesh):
+    pvData = dr.PolyVectorData(ftb, 4)
+    pvData.constSpaces = np.array([0, 0, 300, 900])
+    edges = np.array([[0, 1], [0, 2], [0, 1], [1, 2]])
+    F = mesh.F[pvData.constSpaces]
+    constVectors = mesh.V[F[np.arange(4), edges[:, 1]]]-mesh.V[F[np.arange(4), edges[:, 0]]]
+    pvData.constVectors = constVectors/np.linalg.norm(constVectors, axis=1)[:, None]
+    pvData.wAlignment = np.ones(4)
+    return pvData
+
+
+@pytest.mark.parametrize("name", ["hard", "soft", "hard_rosy", "curl_projection"])
+def test_polyvector_field_matches_cpp(cpp_reference, name):
+    cpp = cpp_reference("polyvector")
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj"))
+    pvData = pv_data(dr.PCFaceTangentBundle(mesh), mesh)
+    if name=="hard":
+        pvData.wAlignment = np.full(4, -1.0)
+    if name=="hard_rosy":
+        pvData.wRoSy = -1.0
+        pvData.initImplicitFactor = 0.2
+        pvData.implicitScheduler = 1.0
+    if name=="curl_projection":
+        pvData.wRoSy = 5.0
+    pvData.iterationMode = name in ("hard_rosy", "curl_projection")
+    pvField = dr.polyvector_field(pvData)
+    if name=="hard_rosy":
+        dr.polyvector_iterate(pvData, pvField, [dr.hard_rosy], 5)
+    if name=="curl_projection":
+        dr.polyvector_iterate(pvData, pvField, [dr.soft_rosy, dr.curl_projection], 3)
+    assert_matches(pvField.intField, cpp(name + "_intField"))
+    assert_matches(dr.polyvector_to_raw(pvField).extField, cpp(name + "_extField"))
+
+
+def test_raw_to_polyvector_matches_cpp(cpp_reference):
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "lilium.obj"))
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "lilium.rawfield"), dr.PCFaceTangentBundle(mesh))
+    assert_matches(dr.raw_to_polyvector(rawField).intField, cpp_reference("polyvector")("raw_to_polyvector_intField"))
