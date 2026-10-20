@@ -9,6 +9,7 @@
 #include <directional/TangentBundle.h>
 #include <directional/PCFaceTangentBundle.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
+#include <directional/ExtrinsicVertexTangentBundle.h>
 #include "utils.h"
 
 namespace nb = nanobind;
@@ -38,4 +39,5 @@ void bind_tangent_bundle(nb::module_& m)
 
     bind_bundle<directional::PCFaceTangentBundle>(m, "PCFaceTangentBundle");
     bind_bundle<directional::IntrinsicVertexTangentBundle>(m, "IntrinsicVertexTangentBundle");
+    bind_bundle<directional::ExtrinsicVertexTangentBundle>(m, "ExtrinsicVertexTangentBundle");
 }

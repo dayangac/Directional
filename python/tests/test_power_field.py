@@ -15,6 +15,7 @@ import directional as dr
 TUTORIAL_DATA_PATH = Path(__file__).parents[2] / "tutorial" / "data"
 N = 4
 NO_CONSTRAINTS = (np.empty(0, dtype=int), np.empty((0, 3)), np.empty(0))
+BUNDLES = [dr.PCFaceTangentBundle, dr.IntrinsicVertexTangentBundle, dr.ExtrinsicVertexTangentBundle]
 
 
 def load(fileName):
@@ -61,7 +62,7 @@ def test_readOBJ_missing_file():
         dr.readOBJ(str(TUTORIAL_DATA_PATH / "missing.obj"))
 
 
-@pytest.mark.parametrize("TangentBundle", [dr.PCFaceTangentBundle, dr.IntrinsicVertexTangentBundle])
+@pytest.mark.parametrize("TangentBundle", BUNDLES)
 def test_bundle_spaces(sphere, TangentBundle):
     tb = TangentBundle(sphere)
     numSpaces = len(sphere.F) if TangentBundle is dr.PCFaceTangentBundle else len(sphere.V)
@@ -84,8 +85,16 @@ def test_bundle_cycles_are_dual_elements(sphere):
 
 
 def test_cycle_curvatures_sum_to_euler_characteristic(sphere):
-    for TangentBundle in (dr.PCFaceTangentBundle, dr.IntrinsicVertexTangentBundle):
+    for TangentBundle in BUNDLES:
         assert np.sum(TangentBundle(sphere).cycleCurvatures)==pytest.approx(2.0*np.pi*sphere.eulerChar)
+
+
+def test_extrinsic_vertex_field_is_tangent_to_vertex_normals(sphere):
+    vtb = dr.ExtrinsicVertexTangentBundle(sphere)
+    np.testing.assert_array_equal(vtb.normals, sphere.vertexNormals)
+    rawField = dr.power_to_raw(dr.power_field(vtb, np.array([0]), np.array([[1.0, 0.0, 0.0]]), np.array([-1.0]), N), N)
+    vectors = rawField.extField.reshape(-1, N, 3)
+    np.testing.assert_allclose(np.sum(vectors*sphere.vertexNormals[:, None, :], axis=2), 0.0, atol=1e-10)
 
 
 def test_hard_constraints_are_met(sphere):
@@ -100,7 +109,7 @@ def test_hard_constraints_are_met(sphere):
     np.testing.assert_allclose(dist, 0, atol=1e-8)
 
 
-@pytest.mark.parametrize("TangentBundle", [dr.PCFaceTangentBundle, dr.IntrinsicVertexTangentBundle])
+@pytest.mark.parametrize("TangentBundle", BUNDLES)
 def test_raw_field_is_rotationally_symmetric(sphere, TangentBundle):
     powerField = dr.power_field(TangentBundle(sphere), *NO_CONSTRAINTS, N)
     rawField = dr.power_to_raw(powerField, N)
@@ -112,7 +121,7 @@ def test_raw_field_is_rotationally_symmetric(sphere, TangentBundle):
 
 
 @pytest.mark.parametrize("fileName", ["spherers.obj", "torus.obj"])
-@pytest.mark.parametrize("TangentBundle", [dr.PCFaceTangentBundle, dr.IntrinsicVertexTangentBundle])
+@pytest.mark.parametrize("TangentBundle", BUNDLES)
 def test_singularities_satisfy_poincare_hopf(fileName, TangentBundle):
     mesh = load(fileName)
     rawField = dr.power_to_raw(dr.power_field(TangentBundle(mesh), *NO_CONSTRAINTS, N), N)

@@ -82,12 +82,19 @@ def test_streamlines_match_cpp(cpp_reference):
         assert_matches(value, cpp(array))
 
 
-@pytest.mark.parametrize("bundleName, TangentBundle", [("face", dr.PCFaceTangentBundle), ("vertex", dr.IntrinsicVertexTangentBundle)])
+@pytest.mark.parametrize("bundleName, TangentBundle", [("face", dr.PCFaceTangentBundle), ("vertex", dr.IntrinsicVertexTangentBundle),
+                                                    ("extrinsic", dr.ExtrinsicVertexTangentBundle)])
 def test_bundle_matches_cpp(cpp_reference, bundleName, TangentBundle):
     cpp = cpp_reference("bundle")
     tb = TangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj")))
     for name in ("sources", "normals", "cycleSources", "avgAdjLength", "cycleCurvatures"):
         assert_matches(getattr(tb, name), cpp(bundleName + "_" + name))
+
+
+def test_extrinsic_power_field_matches_cpp(cpp_reference):
+    vtb = dr.ExtrinsicVertexTangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj")))
+    rawField = dr.power_to_raw(dr.power_field(vtb, np.array([0]), np.array([[1.0, 0.0, 0.0]]), np.array([-1.0]), 4), 4)
+    assert_matches(rawField.extField, cpp_reference("bundle")("extrinsic_extField"))
 
 
 def test_readDMAT_matches_cpp(cpp_reference):

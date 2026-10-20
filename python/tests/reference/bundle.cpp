@@ -8,6 +8,9 @@
 #include <directional/readOBJ.h>
 #include <directional/PCFaceTangentBundle.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
+#include <directional/ExtrinsicVertexTangentBundle.h>
+#include <directional/power_field.h>
+#include <directional/power_to_raw.h>
 #include "write.h"
 
 void write_bundle(const std::string& outDir, const std::string& name, const directional::TangentBundle& tb)
@@ -25,9 +28,22 @@ int main(int argc, char** argv)
     directional::TriMesh mesh;
     directional::PCFaceTangentBundle ftb;
     directional::IntrinsicVertexTangentBundle vtb;
+    directional::ExtrinsicVertexTangentBundle evtb;
     directional::readOBJ(dataDir + "/spherers.obj", mesh);
     ftb.init(mesh);
     vtb.init(mesh);
+    evtb.init(mesh);
     write_bundle(outDir, "face", ftb);
     write_bundle(outDir, "vertex", vtb);
+    write_bundle(outDir, "extrinsic", evtb);
+
+    //a field on the extrinsic bundle, since its connection is not exposed
+    Eigen::VectorXi constVertices(1);
+    constVertices << 0;
+    Eigen::MatrixXd constVectors(1, 3);
+    constVectors << 1.0, 0.0, 0.0;
+    directional::CartesianField powerField, rawField;
+    directional::power_field(evtb, constVertices, constVectors, Eigen::VectorXd::Constant(1, -1.0), 4, powerField);
+    directional::power_to_raw(powerField, 4, rawField);
+    write(outDir, "extrinsic_extField", rawField.extField);
 }

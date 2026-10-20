@@ -52,14 +52,23 @@ def set_raw_field(sources, rawField, name="Field", unitLength=1.0, color=DEFAULT
     return psGlyphs
 
 
+def register_singularities(name, singLocations, singIndices, radius):
+    psSings = ps.register_point_cloud(name, singLocations)
+    psSings.set_radius(radius, relative=False)
+    psSings.add_color_quantity("Indices", np.array([default_index_color(i) for i in singIndices]).reshape(-1, 3), enabled=True)
+    return psSings
+
+
 #Shows the field's own singularities, unless singElements and singIndices are given.
 def set_singularities(field, name="Field", radiusRatio=0.3, singElements=None, singIndices=None):
     if singElements is None:
         singElements, singIndices = field.singLocalCycles, field.singIndices
-    psSings = ps.register_point_cloud(name + " singularities", field.tb.cycleSources[singElements])
-    psSings.set_radius(radiusRatio*field.tb.avgAdjLength, relative=False)
-    psSings.add_color_quantity("Indices", np.array([default_index_color(i) for i in singIndices]).reshape(-1, 3), enabled=True)
-    return psSings
+    return register_singularities(name + " singularities", field.tb.cycleSources[singElements], singIndices, radiusRatio*field.tb.avgAdjLength)
+
+
+#Shows the field's singularities at the given locations (for instance, exact locations inside their cycles).
+def update_singularities_locations(field, singLocations, name="Singularities", radiusRatio=0.3):
+    return register_singularities(name, singLocations, field.singIndices, radiusRatio*field.tb.avgAdjLength)
 
 
 def set_cartesian_field(field, name="Field", unitToAvgLengthRatio=0.3, color=DEFAULT_GLYPH_COLOR):

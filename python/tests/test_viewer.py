@@ -91,3 +91,9 @@ def test_highlights():
     psSeams = viewer.highlight_edges(mesh, np.array([1, 2, 7]))
     assert psSeams.n_edges()==3
     assert psSeams.get_radius()==pytest.approx(0.05*mesh.avgEdgeLength)
+
+
+def test_singularities_at_given_locations(rawField):
+    singLocations = rawField.tb.cycleSources[rawField.singLocalCycles]+0.01
+    psSings = viewer.update_singularities_locations(rawField, singLocations, "Exact Singularities")
+    assert psSings.n_points()==len(rawField.singIndices)
