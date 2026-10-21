@@ -5,6 +5,8 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 
 # Polyscope counterparts of the DirectionalViewer methods used by the tutorials, with the same colors and sizes.
+import itertools
+
 import numpy as np
 import polyscope as ps
 
@@ -75,6 +77,24 @@ def set_cartesian_field(field, name="Field", unitToAvgLengthRatio=0.3, color=DEF
     psGlyphs = set_raw_field(field.tb.sources, field.extField, name, unitToAvgLengthRatio*field.tb.avgAdjLength, color)
     set_singularities(field, name)
     return psGlyphs
+
+
+#Shows a 1-form (a value per edge) as its Whitney-interpolated vector field, at samples inside every face, and returns that field
+def set_1form(mesh, oneForm, name="Field", unitToEdgeLengthRatio=0.1, samplingRate=2, baryOffset=0.2):
+    baryRange = np.linspace(0.0, 1.0, samplingRate)
+    baryCoords = np.array([b for b in itertools.product(baryRange, repeat=3) if abs(sum(b)-1.0)<10e-7])
+    baryCoords = baryOffset+baryCoords*(1.0-3.0*baryOffset)
+
+    faceV = mesh.V[mesh.F]
+    gradB = [np.cross(mesh.faceNormals, faceV[:, (i+2)%3]-faceV[:, (i+1)%3])/(2.0*mesh.faceAreas[:, None]) for i in range(3)]
+    #the Whitney basis function of edge (i, i+1) is B_i*grad(B_{i+1})-B_{i+1}*grad(B_i)
+    oneFormInFace = oneForm[mesh.FE]*mesh.FEs
+    field = sum(oneFormInFace[:, i, None, None]*(baryCoords[None, :, i, None]*gradB[(i+1)%3][:, None, :]
+                                                 -baryCoords[None, :, (i+1)%3, None]*gradB[i][:, None, :]) for i in range(3))
+    sources = np.einsum("sk,fkx->fsx", baryCoords, faceV)
+    field, sources = field.reshape(-1, 3), sources.reshape(-1, 3)
+    set_raw_field(sources, field, name, unitToEdgeLengthRatio*mesh.avgEdgeLength)
+    return field
 
 
 def highlight_faces(faces, name="Face highlights", meshName="Mesh"):

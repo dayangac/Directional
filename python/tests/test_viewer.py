@@ -97,3 +97,13 @@ def test_singularities_at_given_locations(rawField):
     singLocations = rawField.tb.cycleSources[rawField.singLocalCycles]+0.01
     psSings = viewer.update_singularities_locations(rawField, singLocations, "Exact Singularities")
     assert psSings.n_points()==len(rawField.singIndices)
+
+
+def test_1form_of_a_linear_function_shows_its_gradient():
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj"))
+    A = np.array([0.3, -1.2, 0.7])
+    field = viewer.set_1form(mesh, dr.d0_matrix(mesh)@(mesh.V@A), "Exact field", samplingRate=3)
+    #samplingRate 3 gives the 6 barycentric coordinates in {0, 1/2, 1} that add up to 1
+    assert ps.get_point_cloud("Exact field").n_points()==6*len(mesh.F)
+    tangentialA = A-np.outer(mesh.faceNormals@A, np.ones(3))*mesh.faceNormals
+    np.testing.assert_allclose(field.reshape(len(mesh.F), 6, 3), np.repeat(tangentialA[:, None, :], 6, axis=1), atol=1e-10)
