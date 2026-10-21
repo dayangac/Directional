@@ -22,10 +22,18 @@ def assert_matches(pyArray, cppArray):
     np.testing.assert_allclose(np.asarray(pyArray, dtype=float).reshape(cppArray.shape), cppArray, atol=ATOL)
 
 
+def assert_sparse_matches(pyMatrix, cpp, name):
+    entries = cpp(name)
+    cppMatrix = scipy.sparse.csc_matrix((entries[:, 2], (entries[:, 0].astype(int), entries[:, 1].astype(int))),
+                                        shape=tuple(cpp(name + "_shape").astype(int).ravel()))
+    assert pyMatrix.shape==cppMatrix.shape
+    assert abs(pyMatrix-cppMatrix).max()<=ATOL
+
+
 def test_mesh_matches_cpp(cpp_reference):
     cpp = cpp_reference("power_field")
     mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj"))
-    for name in ("EV", "EF", "FE", "faceNormals", "vertexNormals", "faceAreas"):
+    for name in ("EV", "EF", "FE", "faceNormals", "vertexNormals", "faceAreas", "midEdges", "FEs"):
         assert_matches(getattr(mesh, name), cpp(name))
 
 
@@ -199,3 +207,38 @@ def test_prescribed_file_singularities_match_cpp(cpp_reference):
     _, linfError = dr.index_prescription(cycleIndices, 2, 0.0, field)
     assert_matches(field.extField, cpp("prescribed_extField"))
     assert_matches(linfError, cpp("prescribed_linfError"))
+
+
+@pytest.mark.parametrize("name", ["spherers", "lilium"])
+def test_fem_matrices_match_cpp(cpp_reference, name):
+    cpp = cpp_reference("fem")
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / (name + ".obj")))
+    for isIntrinsic in (False, True):
+        prefix = name + ("_intrinsic_" if isIntrinsic else "_extrinsic_")
+        assert_sparse_matches(dr.conf_gradient_matrix_2D(mesh, isIntrinsic, 2), cpp, prefix + "conf_gradient")
+        assert_sparse_matches(dr.non_conf_gradient_matrix_2D(mesh, isIntrinsic, 2), cpp, prefix + "non_conf_gradient")
+        assert_sparse_matches(dr.curl_matrix_2D(mesh, isIntrinsic, 2), cpp, prefix + "curl")
+        assert_sparse_matches(dr.div_matrix_2D(mesh, isIntrinsic, 2), cpp, prefix + "div")
+        assert_sparse_matches(dr.face_vector_rotation_matrix_2D(mesh, isIntrinsic, 2), cpp, prefix + "rotation")
+    assert_sparse_matches(dr.face_mass_matrix_2D(mesh, False, 2), cpp, name + "_face_mass")
+    assert_sparse_matches(dr.face_mass_matrix_2D(mesh, True), cpp, name + "_inverse_face_mass")
+    assert_sparse_matches(dr.edge_diamond_mass_matrix_2D(mesh), cpp, name + "_edge_diamond_mass")
+    assert_sparse_matches(dr.face_extrinsic_to_intrinsic_matrix_2D(mesh, 2), cpp, name + "_extrinsic_to_intrinsic")
+    assert_sparse_matches(dr.face_intrinsic_to_extrinsic_matrix_2D(mesh), cpp, name + "_intrinsic_to_extrinsic")
+
+
+@pytest.mark.parametrize("name", ["spherers", "lilium"])
+def test_dec_operators_match_cpp(cpp_reference, name):
+    cpp = cpp_reference("dec")
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / (name + ".obj")))
+    assert_sparse_matches(dr.d0_matrix(mesh), cpp, name + "_d0")
+    assert_sparse_matches(dr.d1_matrix(mesh), cpp, name + "_d1")
+    assert_sparse_matches(dr.linear_whitney_mass_matrix(mesh), cpp, name + "_whitney_mass")
+    for circumcenter in (True, False):
+        h1, invh1 = dr.hodge_star_1_matrix(mesh, circumcenter)
+        center = "_circumcenter" if circumcenter else "_barycenter"
+        assert_sparse_matches(h1, cpp, name + center + "_hodge_star_1")
+        assert_sparse_matches(invh1, cpp, name + center + "_inv_hodge_star_1")
+    h2, invh2 = dr.hodge_star_2_matrix(mesh)
+    assert_sparse_matches(h2, cpp, name + "_hodge_star_2")
+    assert_sparse_matches(invh2, cpp, name + "_inv_hodge_star_2")

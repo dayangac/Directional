@@ -17,6 +17,8 @@ nanobind_add_module(_directional
     src/bind_streamlines.cpp
     src/bind_matching.cpp
     src/bind_polyvector.cpp
+    src/bind_fem.cpp
+    src/bind_dec.cpp
 )
 target_include_directories(_directional PRIVATE
     "${DIRECTIONAL_ROOT}/include"

@@ -48,6 +48,8 @@ int main(int argc, char** argv)
     write(outDir, "faceNormals", mesh.faceNormals);
     write(outDir, "vertexNormals", mesh.vertexNormals);
     write(outDir, "faceAreas", mesh.faceAreas);
+    write(outDir, "midEdges", mesh.midEdges);
+    write(outDir, "FEs", mesh.FEs);
 
     directional::PCFaceTangentBundle ftb;
     directional::IntrinsicVertexTangentBundle vtb;

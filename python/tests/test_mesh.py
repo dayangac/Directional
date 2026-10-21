@@ -67,3 +67,12 @@ def test_boundary_loops_are_closed_boundary_vertex_chains():
     loopEdges = {frozenset(e) for e in zip(loop, np.roll(loop, -1))}
     assert loopEdges=={frozenset(e) for e in mesh.EV[boundaryEdges]}
     np.testing.assert_array_equal(np.sort(np.concatenate([mesh.innerEdges, boundaryEdges])), np.arange(len(mesh.EV)))
+
+
+def test_mid_edges_and_face_edge_signs():
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "lilium.obj"))
+    np.testing.assert_allclose(mesh.midEdges, (mesh.V[mesh.EV[:, 0]]+mesh.V[mesh.EV[:, 1]])/2.0)
+    #FEs orients each edge along its face, so the signed edge vectors of a face close up
+    edgeVectors = mesh.V[mesh.EV[:, 1]]-mesh.V[mesh.EV[:, 0]]
+    np.testing.assert_allclose(np.einsum("fi,fix->fx", mesh.FEs, edgeVectors[mesh.FE]), 0.0, atol=1e-12)
+    assert set(np.unique(mesh.FEs))=={-1.0, 1.0}
