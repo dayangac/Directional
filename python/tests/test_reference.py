@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import scipy.sparse
 
 import directional as dr
 
@@ -165,3 +166,36 @@ def test_raw_to_polyvector_matches_cpp(cpp_reference):
     mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "lilium.obj"))
     rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "lilium.rawfield"), dr.PCFaceTangentBundle(mesh))
     assert_matches(dr.raw_to_polyvector(rawField).intField, cpp_reference("polyvector")("raw_to_polyvector_intField"))
+
+
+@pytest.mark.parametrize("name", ["fertility", "lilium"])
+def test_topology_matches_cpp(cpp_reference, name):
+    cpp = cpp_reference("topology")
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / (name + ".obj")))
+    assert_matches(mesh.innerEdges, cpp(name + "_innerEdges"))
+    assert_matches(mesh.numGenerators, cpp(name + "_numGenerators"))
+    assert_matches(len(mesh.boundaryLoops), cpp(name + "_numBoundaryLoops"))
+    for i, loop in enumerate(mesh.boundaryLoops):
+        assert_matches(loop, cpp(name + "_boundaryLoop" + str(i)))
+
+
+@pytest.mark.parametrize("name", ["fertility", "lilium"])
+def test_cycles_match_cpp(cpp_reference, name):
+    cpp = cpp_reference("topology")
+    ftb = dr.PCFaceTangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / (name + ".obj"))))
+    assert_matches(ftb.local2Cycle, cpp(name + "_local2Cycle"))
+    cycleEntries = cpp(name + "_cycles")
+    cppCycles = scipy.sparse.csc_matrix((cycleEntries[:, 2], (cycleEntries[:, 0].astype(int), cycleEntries[:, 1].astype(int))), shape=ftb.cycles.shape)
+    assert abs(ftb.cycles-cppCycles).max()==0.0
+
+
+def test_prescribed_file_singularities_match_cpp(cpp_reference):
+    cpp = cpp_reference("topology")
+    ftb = dr.PCFaceTangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / "fertility.obj")))
+    field = dr.CartesianField(ftb, dr.fieldTypeEnum.RAW_FIELD, 2)
+    dr.read_singularities(str(TUTORIAL_DATA_PATH / "fertility.sings"), field)
+    cycleIndices = np.zeros(ftb.cycles.shape[0], dtype=int)
+    cycleIndices[ftb.local2Cycle[field.singLocalCycles]] = field.singIndices
+    _, linfError = dr.index_prescription(cycleIndices, 2, 0.0, field)
+    assert_matches(field.extField, cpp("prescribed_extField"))
+    assert_matches(linfError, cpp("prescribed_linfError"))

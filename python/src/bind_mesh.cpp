@@ -7,6 +7,7 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
 #include <directional/TriMesh.h>
 #include <directional/readOBJ.h>
 #include <directional/readOFF.h>
@@ -49,7 +50,10 @@ void bind_mesh(nb::module_& m)
     .def_prop_ro("maxVertexPrincipalDirections", view(&TriMesh::maxVertexPrincipalDirections), nb::rv_policy::reference_internal)
     .def_prop_ro("vertexPrincipalCurvatures", view(&TriMesh::vertexPrincipalCurvatures), nb::rv_policy::reference_internal)
     .def_ro("avgEdgeLength", &TriMesh::avgEdgeLength)
-    .def_ro("eulerChar", &TriMesh::eulerChar);
+    .def_ro("eulerChar", &TriMesh::eulerChar)
+    .def_prop_ro("innerEdges", view(&TriMesh::innerEdges), nb::rv_policy::reference_internal)
+    .def_ro("numGenerators", &TriMesh::numGenerators)
+    .def_ro("boundaryLoops", &TriMesh::boundaryLoops);
 
     m.def("readOBJ", &read_mesh<directional::readOBJ>, "fileName"_a);
     m.def("readOFF", &read_mesh<directional::readOFF>, "fileName"_a);

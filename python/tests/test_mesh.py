@@ -48,3 +48,22 @@ def test_readDMAT():
     assert constFaces[0, 0]==9
     with pytest.raises(RuntimeError):
         dr.readDMAT(str(TUTORIAL_DATA_PATH / "missing.dmat"))
+
+
+@pytest.mark.parametrize("fileName, genus", [("spherers.obj", 0), ("torus.obj", 1), ("fertility.obj", 4)])
+def test_closed_mesh_topology(fileName, genus):
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / fileName))
+    assert mesh.numGenerators==genus
+    assert mesh.boundaryLoops==[]
+    np.testing.assert_array_equal(mesh.innerEdges, np.arange(len(mesh.EV)))
+
+
+def test_boundary_loops_are_closed_boundary_vertex_chains():
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "lilium.obj"))
+    boundaryEdges = np.flatnonzero((mesh.EF<0).any(axis=1))
+    assert len(mesh.boundaryLoops)==1
+    loop = np.array(mesh.boundaryLoops[0])
+    assert len(loop)==len(boundaryEdges)
+    loopEdges = {frozenset(e) for e in zip(loop, np.roll(loop, -1))}
+    assert loopEdges=={frozenset(e) for e in mesh.EV[boundaryEdges]}
+    np.testing.assert_array_equal(np.sort(np.concatenate([mesh.innerEdges, boundaryEdges])), np.arange(len(mesh.EV)))

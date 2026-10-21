@@ -6,6 +6,7 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <directional/TangentBundle.h>
 #include <directional/PCFaceTangentBundle.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
@@ -35,7 +36,9 @@ void bind_tangent_bundle(nb::module_& m)
     .def_prop_ro("sources", view(&TangentBundle::sources), nb::rv_policy::reference_internal)
     .def_prop_ro("normals", view(&TangentBundle::normals), nb::rv_policy::reference_internal)
     .def_prop_ro("cycleSources", view(&TangentBundle::cycleSources), nb::rv_policy::reference_internal)
-    .def_prop_ro("cycleCurvatures", view(&TangentBundle::cycleCurvatures), nb::rv_policy::reference_internal);
+    .def_prop_ro("cycleCurvatures", view(&TangentBundle::cycleCurvatures), nb::rv_policy::reference_internal)
+    .def_prop_ro("local2Cycle", view(&TangentBundle::local2Cycle), nb::rv_policy::reference_internal)
+    .def_prop_ro("cycles", [](const TangentBundle& tb){ return tb.cycles; });  //a scipy.sparse copy
 
     bind_bundle<directional::PCFaceTangentBundle>(m, "PCFaceTangentBundle");
     bind_bundle<directional::IntrinsicVertexTangentBundle>(m, "IntrinsicVertexTangentBundle");

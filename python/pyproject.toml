@@ -7,7 +7,7 @@ name = "directional"
 version = "0.1.0"
 description = "Python bindings for Directional, a directional-field processing library"
 requires-python = ">=3.9"
-dependencies = ["numpy"]
+dependencies = ["numpy", "scipy"]
 
 [project.optional-dependencies]
 test = ["pytest", "polyscope"]

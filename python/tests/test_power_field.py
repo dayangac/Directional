@@ -89,6 +89,45 @@ def test_cycle_curvatures_sum_to_euler_characteristic(sphere):
         assert np.sum(TangentBundle(sphere).cycleCurvatures)==pytest.approx(2.0*np.pi*sphere.eulerChar)
 
 
+#a local cycle around every vertex (face bundle) or face (vertex bundle), then for face bundles 2*genus generator cycles
+#(vertex bundles have no generator cycles yet, see the TODO in IntrinsicVertexTangentBundle::init())
+@pytest.mark.parametrize("TangentBundle", BUNDLES)
+def test_bundle_cycles(TangentBundle):
+    mesh = load("fertility.obj")
+    tb = TangentBundle(mesh)
+    isFaceBundle = TangentBundle is dr.PCFaceTangentBundle
+    numLocalCycles = len(mesh.V) if isFaceBundle else len(mesh.F)
+    assert tb.cycles.shape==(numLocalCycles+(2*mesh.numGenerators if isFaceBundle else 0), len(mesh.innerEdges))
+    assert len(tb.cycleCurvatures)==tb.cycles.shape[0]
+    np.testing.assert_array_equal(tb.local2Cycle, np.arange(numLocalCycles))
+
+
+def test_boundary_vertices_map_to_their_boundary_cycle():
+    mesh = load("lilium.obj")
+    ftb = dr.PCFaceTangentBundle(mesh)
+    boundaryVertices = np.unique(mesh.boundaryLoops[0])
+    innerVertices = np.setdiff1d(np.arange(len(mesh.V)), boundaryVertices)
+    assert len(np.unique(ftb.local2Cycle[innerVertices]))==len(innerVertices)
+    assert np.all(ftb.local2Cycle[boundaryVertices]==ftb.cycles.shape[0]-1)
+
+
+def test_local_cycles_cross_every_inner_edge_twice(sphere):
+    localCycles = dr.PCFaceTangentBundle(sphere).cycles[:len(sphere.V)].toarray()
+    np.testing.assert_array_equal(np.sum(localCycles, axis=0), 0)
+    np.testing.assert_array_equal(np.sum(np.abs(localCycles), axis=0), 2)
+
+
+def test_cycles_give_the_singularity_indices(sphere):
+    ftb = dr.PCFaceTangentBundle(sphere)
+    rawField = dr.power_to_raw(dr.power_field(ftb, np.array([0, 500]), np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]), np.array([-1.0, -1.0]), N), N)
+    dr.principal_matching(rawField)
+    indices = (ftb.cycles@rawField.effort[sphere.innerEdges]+N*ftb.cycleCurvatures)/(2.0*np.pi)
+    np.testing.assert_allclose(indices, np.round(indices), atol=1e-8)
+    expected = np.zeros(len(indices))
+    expected[ftb.local2Cycle[rawField.singLocalCycles]] = rawField.singIndices
+    np.testing.assert_array_equal(np.round(indices), expected)
+
+
 def test_extrinsic_vertex_field_is_tangent_to_vertex_normals(sphere):
     vtb = dr.ExtrinsicVertexTangentBundle(sphere)
     np.testing.assert_array_equal(vtb.normals, sphere.vertexNormals)
