@@ -242,3 +242,20 @@ def test_dec_operators_match_cpp(cpp_reference, name):
     h2, invh2 = dr.hodge_star_2_matrix(mesh)
     assert_sparse_matches(h2, cpp, name + "_hodge_star_2")
     assert_sparse_matches(invh2, cpp, name + "_inv_hodge_star_2")
+
+
+def test_cochain_functions_match_cpp(cpp_reference):
+    cpp = cpp_reference("cochain")
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "torus.obj"))
+    d0, d1 = dr.d0_matrix(mesh), dr.d1_matrix(mesh)
+    h1, _ = dr.hodge_star_1_matrix(mesh)
+    h2, _ = dr.hodge_star_2_matrix(mesh)
+    oneForm = np.sin(mesh.midEdges[:, 0])+np.cos(mesh.midEdges[:, 1])
+    for prefix, result in (("exact", dr.project_exact(d0, h1, oneForm)), ("gauge", dr.project_exact(d1, h1, d1@oneForm, gaugeFixing=True))):
+        assert_matches(result[0], cpp(prefix + "_prevCochain"))
+        assert_matches(result[1], cpp(prefix + "_exactCochain"))
+    exactCochain, coexactCochain, harmCochain, _, _ = dr.hodge_decomposition(d0, d1, h1, h2, oneForm, 1)
+    for name, value in (("exactCochain", exactCochain), ("coexactCochain", coexactCochain), ("harmCochain", harmCochain)):
+        assert_matches(value, cpp("hodge_" + name))
+    harmBasis = dr.cohomology_basis(d0, d1, h1, 2)
+    np.testing.assert_allclose(harmBasis@(harmBasis.T@h1@oneForm), cpp("harmonic_projection").ravel(), atol=1e-6)
