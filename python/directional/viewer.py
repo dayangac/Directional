@@ -10,6 +10,8 @@ import itertools
 import numpy as np
 import polyscope as ps
 
+from ._directional import branched_isolines
+
 DEFAULT_FACE_COLOR = (243.0/255.0, 241.0/255.0, 216.0/255.0)
 DEFAULT_GLYPH_COLOR = (0.05, 0.05, 1.0)
 DEFAULT_VECTOR_CONSTRAINT_COLOR = (1.0, 1.0, 0.2)
@@ -118,3 +120,17 @@ def set_streamlines(state, name="Streamlines", width=0.05):
     psStreamlines = ps.register_curve_network(name, np.vstack([state.segStart, state.segEnd]), edges)
     psStreamlines.set_radius(width, relative=False)
     return psStreamlines
+
+
+#field gives the isoline width, through the average length of its tangent bundle
+def set_isolines(cutMesh, vertexFunction, field, name="Isolines", sizeToEdgeLengthRatio=0.05):
+    isoV, isoE, _, _, funcNum = branched_isolines(cutMesh.V, cutMesh.F, vertexFunction)
+    psIsolines = ps.register_curve_network(name, isoV, isoE)
+    psIsolines.set_radius(sizeToEdgeLengthRatio*field.tb.avgAdjLength, relative=False)
+    psIsolines.add_color_quantity("Function number", np.array(GLYPH_PRINCIPAL_COLORS)[funcNum], defined_on="edges", enabled=True)
+    return psIsolines
+
+
+def set_uv(UV, name="UV", meshName="Mesh"):
+    ps.get_surface_mesh(meshName).add_parameterization_quantity(name, UV, coords_type="unit", viz_style="grid",
+                                                                grid_colors=((1.0, 1.0, 1.0), (0.0, 0.0, 0.0)), checker_size=1.0)

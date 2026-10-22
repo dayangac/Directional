@@ -12,6 +12,7 @@
 #include <directional/readOBJ.h>
 #include <directional/readOFF.h>
 #include <directional/readDMAT.h>
+#include <directional/writeOBJ.h>
 #include "utils.h"
 
 namespace nb = nanobind;
@@ -65,4 +66,11 @@ void bind_mesh(nb::module_& m)
             throw std::runtime_error("could not read " + fileName);
         return dmat;
     }, "fileName"_a);
+    m.def("writeOBJ", [](const std::string& fileName, const TriMesh& mesh, const Eigen::MatrixXd& TC, const Eigen::MatrixXi& FTC,
+                         const std::string& mtlFileName, const std::string& textureName){
+        require(TC.cols()>=2, "TC must be #TC by 2");
+        require(FTC.rows()==mesh.F.rows() && FTC.cols()==3, "FTC must be #F by 3");
+        require(FTC.minCoeff()>=0 && FTC.maxCoeff()<TC.rows(), "FTC contains out-of-range indices into TC");
+        return directional::writeOBJ(fileName, mesh, TC, FTC, mtlFileName, textureName);
+    }, "fileName"_a, "mesh"_a, "TC"_a, "FTC"_a, "mtlFileName"_a="", "textureName"_a="");
 }

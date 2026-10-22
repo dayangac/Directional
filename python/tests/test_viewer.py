@@ -107,3 +107,32 @@ def test_1form_of_a_linear_function_shows_its_gradient():
     assert ps.get_point_cloud("Exact field").n_points()==6*len(mesh.F)
     tangentialA = A-np.outer(mesh.faceNormals@A, np.ones(3))*mesh.faceNormals
     np.testing.assert_allclose(field.reshape(len(mesh.F), 6, 3), np.repeat(tangentialA[:, None, :], 6, axis=1), atol=1e-10)
+
+
+@pytest.fixture(scope="module")
+def integrated():
+    mesh = dr.readOFF(str(TUTORIAL_DATA_PATH / "vase.off"))
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "vase-4.rawfield"), dr.PCFaceTangentBundle(mesh))
+    dr.principal_matching(rawField)
+    intData = dr.IntegrationData(rawField.N)
+    meshCut, combedField = dr.setup_integration(rawField, intData)
+    NFunction, _ = dr.integrate(combedField, intData, meshCut)
+    return meshCut, combedField, NFunction
+
+
+def test_uv_is_added_to_the_mesh(integrated):
+    meshCut, _, NFunction = integrated
+    psMesh = viewer.set_surface_mesh(meshCut, "Cut mesh")
+    viewer.set_uv(NFunction[:, :2], "UV", "Cut mesh")
+    psMesh.remove_quantity("UV", error_if_absent=True)
+    with pytest.raises(ValueError):
+        viewer.set_uv(NFunction[:10, :2], "UV", "Cut mesh")
+
+
+def test_isolines_are_colored_by_function(integrated):
+    meshCut, combedField, NFunction = integrated
+    psIsolines = viewer.set_isolines(meshCut, NFunction, combedField, sizeToEdgeLengthRatio=0.1)
+    _, isoE, _, _, funcNum = dr.branched_isolines(meshCut.V, meshCut.F, NFunction)
+    assert psIsolines.n_edges()==len(isoE)
+    assert psIsolines.get_radius()==pytest.approx(0.1*combedField.tb.avgAdjLength)
+    np.testing.assert_array_equal(np.unique(funcNum), [0, 1])

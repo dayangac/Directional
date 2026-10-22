@@ -76,3 +76,26 @@ def test_mid_edges_and_face_edge_signs():
     edgeVectors = mesh.V[mesh.EV[:, 1]]-mesh.V[mesh.EV[:, 0]]
     np.testing.assert_allclose(np.einsum("fi,fix->fx", mesh.FEs, edgeVectors[mesh.FE]), 0.0, atol=1e-12)
     assert set(np.unique(mesh.FEs))=={-1.0, 1.0}
+
+
+def test_writeOBJ_writes_texture_coordinates(torus, tmp_path):
+    fileName = str(tmp_path / "torus.obj")
+    UV = torus.V[:, [0, 2]]
+    assert dr.writeOBJ(fileName, torus, UV, torus.F, "squares.mtl", "material_0")
+    lines = Path(fileName).read_text().splitlines()
+    assert lines[:2]==["mtllib squares.mtl", "usemtl material_0"]
+    vt = np.array([line.split()[1:] for line in lines if line.startswith("vt ")], dtype=float)
+    np.testing.assert_allclose(vt, UV, atol=1e-5)  #written in the default stream precision
+    assert next(line for line in lines if line.startswith("f "))=="f " + " ".join(str(i+1) + "/" + str(i+1) for i in torus.F[0])
+    readMesh = dr.readOBJ(fileName)
+    np.testing.assert_allclose(readMesh.V, torus.V, atol=1e-5)
+    np.testing.assert_array_equal(readMesh.F, torus.F)
+
+
+def test_writeOBJ_rejects_bad_input(torus, tmp_path):
+    with pytest.raises(ValueError):
+        dr.writeOBJ(str(tmp_path / "torus.obj"), torus, torus.V[:, :2], torus.F[:-1])
+    with pytest.raises(ValueError):
+        dr.writeOBJ(str(tmp_path / "torus.obj"), torus, torus.V[:10, :2], torus.F)
+    with pytest.raises(RuntimeError):
+        dr.writeOBJ(str(tmp_path / "missing" / "torus.obj"), torus, torus.V[:, :2], torus.F)
