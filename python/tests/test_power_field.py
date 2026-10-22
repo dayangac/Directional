@@ -71,6 +71,14 @@ def test_bundle_spaces(sphere, TangentBundle):
     assert tb.avgAdjLength==pytest.approx(sphere.avgEdgeLength)
 
 
+@pytest.mark.parametrize("TangentBundle", BUNDLES)
+def test_bundle_adjacency_is_the_dual_or_primal_edges(TangentBundle):
+    #lilium has a boundary, where one of the adjacent faces is -1
+    mesh = load("lilium.obj")
+    expected = mesh.EF if TangentBundle is dr.PCFaceTangentBundle else mesh.EV
+    np.testing.assert_array_equal(TangentBundle(mesh).adjSpaces, expected)
+
+
 def test_field_refers_to_its_bundle(sphere):
     ftb = dr.PCFaceTangentBundle(sphere)
     rawField = dr.power_to_raw(dr.power_field(ftb, *NO_CONSTRAINTS, N), N)

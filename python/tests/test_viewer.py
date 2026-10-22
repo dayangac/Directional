@@ -8,6 +8,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import scipy.sparse
+from scipy.sparse.csgraph import shortest_path
 
 ps = pytest.importorskip("polyscope")
 import directional as dr
@@ -136,3 +138,22 @@ def test_isolines_are_colored_by_function(integrated):
     assert psIsolines.n_edges()==len(isoE)
     assert psIsolines.get_radius()==pytest.approx(0.1*combedField.tb.avgAdjLength)
     np.testing.assert_array_equal(np.unique(funcNum), [0, 1])
+
+
+@pytest.mark.parametrize("TangentBundle", [dr.PCFaceTangentBundle, dr.IntrinsicVertexTangentBundle])
+def test_sparse_samples_are_rings_apart_and_cover_the_bundle(TangentBundle):
+    tb = TangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / "lilium.obj")))
+    np.testing.assert_array_equal(viewer.samples_tangent_bundle(tb, 0), np.arange(tb.numSpaces))
+    inner = tb.adjSpaces[np.all(tb.adjSpaces>=0, axis=1)]
+    graph = scipy.sparse.coo_matrix((np.ones(len(inner)), (inner[:, 0], inner[:, 1])), shape=(tb.numSpaces, tb.numSpaces))
+    for sparsity in (1, 3):
+        samples = viewer.samples_tangent_bundle(tb, sparsity)
+        distances = shortest_path(graph, directed=False, unweighted=True, indices=samples)
+        assert np.all(distances[:, samples][~np.eye(len(samples), dtype=bool)]>sparsity)
+        assert np.all(distances.min(axis=0)<=sparsity)
+
+
+def test_sparse_cartesian_field_shows_only_the_samples(rawField):
+    psGlyphs = viewer.set_cartesian_field(rawField, "Sparse", sparsity=2)
+    assert psGlyphs.n_points()==len(viewer.samples_tangent_bundle(rawField.tb, 2))<rawField.tb.numSpaces
+    assert ps.get_point_cloud("Sparse singularities").n_points()==len(rawField.singIndices)

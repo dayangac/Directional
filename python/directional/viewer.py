@@ -9,6 +9,7 @@ import itertools
 
 import numpy as np
 import polyscope as ps
+import scipy.sparse
 
 from ._directional import branched_isolines
 
@@ -75,8 +76,32 @@ def update_singularities_locations(field, singLocations, name="Singularities", r
     return register_singularities(name, singLocations, field.singIndices, radiusRatio*field.tb.avgAdjLength)
 
 
-def set_cartesian_field(field, name="Field", unitToAvgLengthRatio=0.3, color=DEFAULT_GLYPH_COLOR):
-    psGlyphs = set_raw_field(field.tb.sources, field.extField, name, unitToAvgLengthRatio*field.tb.avgAdjLength, color)
+#Greedily samples tangent spaces that are more than sparsity rings apart (all of them for sparsity 0).
+def samples_tangent_bundle(tb, sparsity):
+    if sparsity==0:
+        return np.arange(tb.numSpaces)
+    inner = tb.adjSpaces[np.all(tb.adjSpaces>=0, axis=1)]
+    adjMat = scipy.sparse.coo_matrix((np.ones(len(inner), dtype=bool), (inner[:, 0], inner[:, 1])), shape=(tb.numSpaces, tb.numSpaces)).tocsr()
+    adjMat = adjMat+adjMat.T
+    ringMat, power = adjMat, adjMat
+    for _ in range(sparsity-1):
+        power = power@adjMat
+        ringMat = ringMat+power
+    sampleMask = np.zeros(tb.numSpaces, dtype=int)
+    for i in range(tb.numSpaces):
+        if sampleMask[i]!=0:  #occupied space
+            continue
+        sampleMask[i] = 2
+        #clearing out all other spaces in the rings
+        ring = ringMat.indices[ringMat.indptr[i]:ringMat.indptr[i+1]]
+        sampleMask[ring[sampleMask[ring]==0]] = 1
+    return np.flatnonzero(sampleMask==2)
+
+
+def set_cartesian_field(field, name="Field", unitToAvgLengthRatio=0.3, color=DEFAULT_GLYPH_COLOR, sparsity=0):
+    sampledSpaces = samples_tangent_bundle(field.tb, sparsity)
+    psGlyphs = set_raw_field(field.tb.sources[sampledSpaces], field.extField[sampledSpaces], name,
+                             unitToAvgLengthRatio*field.tb.avgAdjLength, color)
     set_singularities(field, name)
     return psGlyphs
 
