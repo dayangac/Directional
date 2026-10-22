@@ -259,3 +259,24 @@ def test_cochain_functions_match_cpp(cpp_reference):
         assert_matches(value, cpp("hodge_" + name))
     harmBasis = dr.cohomology_basis(d0, d1, h1, 2)
     np.testing.assert_allclose(harmBasis@(harmBasis.T@h1@oneForm), cpp("harmonic_projection").ravel(), atol=1e-6)
+
+
+def test_integration_matches_cpp(cpp_reference):
+    cpp = cpp_reference("integration")
+    mesh = dr.readOFF(str(TUTORIAL_DATA_PATH / "vase.off"))
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "vase-4.rawfield"), dr.PCFaceTangentBundle(mesh))
+    dr.principal_matching(rawField)
+    intData = dr.IntegrationData(rawField.N)
+    intData.integralSeamless = True
+    for name, roundSeams in (("seams", True), ("sings", False)):
+        intData.roundSeams = roundSeams
+        meshCut, combedField = dr.setup_integration(rawField, intData)
+        NFunction, NCornerFunctions = dr.integrate(combedField, intData, meshCut)
+        for array, value in (("cutV", meshCut.V), ("cutF", meshCut.F), ("face2cut", intData.face2cut),
+                             ("constrainedVertices", intData.constrainedVertices), ("matching", combedField.matching),
+                             ("extField", combedField.extField), ("NFunction", NFunction), ("NCornerFunctions", NCornerFunctions),
+                             ("nVertexFunction", intData.nVertexFunction)):
+            assert_matches(value, cpp(name + "_" + array))
+        isoV, isoE, _, _, funcNum = dr.branched_isolines(meshCut.V, meshCut.F, NFunction)
+        for array, value in (("isoV", isoV), ("isoE", isoE), ("funcNum", funcNum)):
+            assert_matches(value, cpp(name + "_" + array))
