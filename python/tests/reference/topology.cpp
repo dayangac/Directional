@@ -26,6 +26,16 @@ int main(int argc, char** argv)
         for (int i=0;i<mesh.boundaryLoops.size();i++)
             write(outDir, name + "_boundaryLoop" + std::to_string(i), Eigen::Map<const Eigen::VectorXi>(mesh.boundaryLoops[i].data(), mesh.boundaryLoops[i].size()));
         write(outDir, name + "_local2Cycle", ftb.local2Cycle);
+        for (const auto& [array, matrix] : {std::pair{"TT", &mesh.TT}, {"EFi", &mesh.EFi}, {"VE", &mesh.VE}, {"VF", &mesh.VF}})
+            write(outDir, name + "_" + array, *matrix);
+        write(outDir, name + "_isBoundaryVertex", mesh.isBoundaryVertex);
+        write(outDir, name + "_GaussianCurvature", mesh.GaussianCurvature);
+        write(outDir, name + "_FBx", mesh.FBx);
+        write(outDir, name + "_VBy", mesh.VBy);
+        Eigen::MatrixXi halfedges(mesh.dcel.halfedges.size(), 5);
+        for (int i=0;i<halfedges.rows();i++)
+            halfedges.row(i) << mesh.HV(i), mesh.HE(i), mesh.HF(i), mesh.nextH(i), mesh.twinH(i);
+        write(outDir, name + "_halfedges", halfedges);
 
         //the nonzeros of the cycles, one (row, column, value) per line
         Eigen::MatrixXd cycleEntries(ftb.cycles.nonZeros(), 3);

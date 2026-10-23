@@ -29,6 +29,16 @@ TriMesh read_mesh(const std::string& fileName)
     return mesh;
 }
 
+//The half-edge accessors of TriMesh take an index, so they are exposed as arrays over all elements.
+template <typename Accessor>
+Eigen::VectorXi per_element(const int size, const Accessor& accessor)
+{
+    Eigen::VectorXi values(size);
+    for (int i=0;i<size;i++)
+        values(i) = accessor(i);
+    return values;
+}
+
 void bind_mesh(nb::module_& m)
 {
     nb::class_<TriMesh>(m, "TriMesh")
@@ -56,7 +66,37 @@ void bind_mesh(nb::module_& m)
     .def_ro("eulerChar", &TriMesh::eulerChar)
     .def_prop_ro("innerEdges", view(&TriMesh::innerEdges), nb::rv_policy::reference_internal)
     .def_ro("numGenerators", &TriMesh::numGenerators)
-    .def_ro("boundaryLoops", &TriMesh::boundaryLoops);
+    .def_ro("boundaryLoops", &TriMesh::boundaryLoops)
+    .def_prop_ro("TT", view(&TriMesh::TT), nb::rv_policy::reference_internal)
+    .def_prop_ro("EFi", view(&TriMesh::EFi), nb::rv_policy::reference_internal)
+    .def_prop_ro("VE", view(&TriMesh::VE), nb::rv_policy::reference_internal)
+    .def_prop_ro("VF", view(&TriMesh::VF), nb::rv_policy::reference_internal)
+    .def_prop_ro("boundEdges", view(&TriMesh::boundEdges), nb::rv_policy::reference_internal)
+    .def_prop_ro("vertexValence", view(&TriMesh::vertexValence), nb::rv_policy::reference_internal)
+    .def_prop_ro("isBoundaryVertex", view(&TriMesh::isBoundaryVertex), nb::rv_policy::reference_internal)
+    .def_prop_ro("isBoundaryEdge", view(&TriMesh::isBoundaryEdge), nb::rv_policy::reference_internal)
+    .def_prop_ro("FBx", view(&TriMesh::FBx), nb::rv_policy::reference_internal)
+    .def_prop_ro("FBy", view(&TriMesh::FBy), nb::rv_policy::reference_internal)
+    .def_prop_ro("VBx", view(&TriMesh::VBx), nb::rv_policy::reference_internal)
+    .def_prop_ro("VBy", view(&TriMesh::VBy), nb::rv_policy::reference_internal)
+    .def_prop_ro("GaussianCurvature", view(&TriMesh::GaussianCurvature), nb::rv_policy::reference_internal)
+    .def_prop_ro("minBox", view(&TriMesh::minBox), nb::rv_policy::reference_internal)
+    .def_prop_ro("maxBox", view(&TriMesh::maxBox), nb::rv_policy::reference_internal)
+    .def_prop_ro("VH", [](const TriMesh& mesh){ return per_element(mesh.V.rows(), [&](const int i){ return mesh.VH(i); }); })
+    .def_prop_ro("HV", [](const TriMesh& mesh){ return per_element(mesh.dcel.halfedges.size(), [&](const int i){ return mesh.HV(i); }); })
+    .def_prop_ro("HE", [](const TriMesh& mesh){ return per_element(mesh.dcel.halfedges.size(), [&](const int i){ return mesh.HE(i); }); })
+    .def_prop_ro("HF", [](const TriMesh& mesh){ return per_element(mesh.dcel.halfedges.size(), [&](const int i){ return mesh.HF(i); }); })
+    .def_prop_ro("nextH", [](const TriMesh& mesh){ return per_element(mesh.dcel.halfedges.size(), [&](const int i){ return mesh.nextH(i); }); })
+    .def_prop_ro("prevH", [](const TriMesh& mesh){ return per_element(mesh.dcel.halfedges.size(), [&](const int i){ return mesh.prevH(i); }); })
+    .def_prop_ro("twinH", [](const TriMesh& mesh){ return per_element(mesh.dcel.halfedges.size(), [&](const int i){ return mesh.twinH(i); }); })
+    .def_prop_ro("FH", [](const TriMesh& mesh){ return per_element(mesh.F.rows(), [&](const int i){ return mesh.FH(i); }); })
+    //#E by 2: the halfedge of each edge, and its twin (-1 on the boundary)
+    .def_prop_ro("EH", [](const TriMesh& mesh){
+        Eigen::MatrixXi EH(mesh.EV.rows(), 2);
+        for (int i=0;i<EH.rows();i++)
+            EH.row(i) << mesh.EH(i, 0), mesh.EH(i, 1);
+        return EH;
+    });
 
     m.def("readOBJ", &read_mesh<directional::readOBJ>, "fileName"_a);
     m.def("readOFF", &read_mesh<directional::readOFF>, "fileName"_a);

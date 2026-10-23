@@ -140,7 +140,7 @@ public:
                 if (std::abs(sinAngle)>10e-7) //otherwise defaulting to zero
                     faceCotWeights(i,j) = cosAngle/sinAngle;
                 
-                cotWeights(mesh->FE(i,j))+=0.5*faceCotWeights(i,j);
+                cotWeights(mesh->FE(i,(j+1)%3))+=0.5*faceCotWeights(i,j);  //the edge opposite to corner j
             }
         }
         

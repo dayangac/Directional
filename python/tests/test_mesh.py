@@ -99,3 +99,71 @@ def test_writeOBJ_rejects_bad_input(torus, tmp_path):
         dr.writeOBJ(str(tmp_path / "torus.obj"), torus, torus.V[:10, :2], torus.F)
     with pytest.raises(RuntimeError):
         dr.writeOBJ(str(tmp_path / "missing" / "torus.obj"), torus, torus.V[:, :2], torus.F)
+
+
+@pytest.fixture(scope="module", params=["spherers.obj", "lilium.obj"])
+def mesh(request):
+    return dr.readOBJ(str(TUTORIAL_DATA_PATH / request.param))
+
+
+def test_boundary_flags(mesh):
+    boundaryEdges = np.flatnonzero(np.any(mesh.EF<0, axis=1))
+    np.testing.assert_array_equal(mesh.isBoundaryEdge, np.isin(np.arange(len(mesh.EV)), boundaryEdges))
+    np.testing.assert_array_equal(mesh.boundEdges, boundaryEdges)
+    boundaryVertices = np.concatenate([[]]+mesh.boundaryLoops).astype(int)
+    np.testing.assert_array_equal(mesh.isBoundaryVertex, np.isin(np.arange(len(mesh.V)), boundaryVertices))
+
+
+def test_adjacency_is_padded_with_minus_one(mesh):
+    np.testing.assert_array_equal(mesh.vertexValence, np.bincount(mesh.EV.ravel(), minlength=len(mesh.V)))
+    numFaces = np.bincount(mesh.F.ravel(), minlength=len(mesh.V))
+    for v in range(0, len(mesh.V), 7):
+        valence = mesh.vertexValence[v]
+        assert set(mesh.VE[v, :valence])==set(np.flatnonzero(np.any(mesh.EV==v, axis=1)))
+        assert set(mesh.VF[v, :numFaces[v]])==set(np.flatnonzero(np.any(mesh.F==v, axis=1)))
+        np.testing.assert_array_equal(mesh.VE[v, valence:], -1)
+        np.testing.assert_array_equal(mesh.VF[v, numFaces[v]:], -1)
+
+
+def test_face_adjacency_is_across_face_edges(mesh):
+    #TT[f, j] is the face on the other side of FE[f, j] (-1 on the boundary), which is at position EFi of the edge in its faces
+    EF = mesh.EF[mesh.FE]
+    np.testing.assert_array_equal(mesh.TT, np.where(EF[:, :, 0]==np.arange(len(mesh.F))[:, None], EF[:, :, 1], EF[:, :, 0]))
+    for side in (0, 1):
+        faces = mesh.EF[:, side]
+        np.testing.assert_array_equal(mesh.EFi[:, side]==-1, faces==-1)
+        np.testing.assert_array_equal(mesh.FE[faces[faces>=0], mesh.EFi[faces>=0, side]], np.flatnonzero(faces>=0))
+
+
+def test_halfedges(mesh):
+    halfedges = np.arange(len(mesh.HV))
+    nextH, prevH, twinH = mesh.nextH, mesh.prevH, mesh.twinH
+    assert len(halfedges)==3*len(mesh.F)
+    np.testing.assert_array_equal(nextH[nextH[nextH]], halfedges)
+    np.testing.assert_array_equal(prevH[nextH], halfedges)
+    np.testing.assert_array_equal(mesh.HF[nextH], mesh.HF)
+    inner = twinH>=0
+    np.testing.assert_array_equal(twinH[twinH[inner]], halfedges[inner])
+    np.testing.assert_array_equal(mesh.HE[twinH[inner]], mesh.HE[inner])
+    #a halfedge goes from HV to the HV of the next one, along its edge
+    np.testing.assert_array_equal(np.sort(mesh.EV[mesh.HE], axis=1), np.sort(np.column_stack([mesh.HV, mesh.HV[nextH]]), axis=1))
+    np.testing.assert_array_equal(mesh.HV[mesh.VH], np.arange(len(mesh.V)))
+    np.testing.assert_array_equal(mesh.HF[mesh.FH], np.arange(len(mesh.F)))
+    np.testing.assert_array_equal(mesh.HE[mesh.EH[:, 0]], np.arange(len(mesh.EV)))
+    np.testing.assert_array_equal(mesh.EH[:, 1], twinH[mesh.EH[:, 0]])
+
+
+def test_local_bases_are_orthonormal_tangent_frames(mesh):
+    for Bx, By, normals in ((mesh.FBx, mesh.FBy, mesh.faceNormals), (mesh.VBx, mesh.VBy, mesh.vertexNormals)):
+        np.testing.assert_allclose(np.cross(Bx, By), normals, atol=1e-10)
+        np.testing.assert_allclose(np.linalg.norm(Bx, axis=1), 1.0, atol=1e-10)
+
+
+def test_gaussian_curvature_satisfies_gauss_bonnet(mesh):
+    #the angle defects, with the boundary turning angles at boundary vertices
+    assert np.sum(mesh.GaussianCurvature)==pytest.approx(2.0*np.pi*mesh.eulerChar, abs=1e-8)
+
+
+def test_bounding_box(mesh):
+    np.testing.assert_array_equal(mesh.minBox.ravel(), mesh.V.min(axis=0))
+    np.testing.assert_array_equal(mesh.maxBox.ravel(), mesh.V.max(axis=0))

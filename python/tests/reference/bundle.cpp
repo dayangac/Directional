@@ -21,6 +21,11 @@ void write_bundle(const std::string& outDir, const std::string& name, const dire
     write(outDir, name + "_cycleSources", tb.cycleSources);
     write(outDir, name + "_avgAdjLength", tb.avgAdjLength);
     write(outDir, name + "_cycleCurvatures", tb.cycleCurvatures);
+    write(outDir, name + "_oneRing", tb.oneRing);
+    write(outDir, name + "_innerAdjacencies", tb.innerAdjacencies);
+    write(outDir, name + "_connection", (Eigen::MatrixXd(tb.connection.size(), 2) << tb.connection.real(), tb.connection.imag()).finished());
+    write_sparse(outDir, name + "_connectionMass", tb.connectionMass);
+    write_sparse(outDir, name + "_tangentSpaceMass", tb.tangentSpaceMass);
 }
 
 int main(int argc, char** argv)

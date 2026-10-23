@@ -98,6 +98,11 @@ def test_bundle_matches_cpp(cpp_reference, bundleName, TangentBundle):
     tb = TangentBundle(dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj")))
     for name in ("sources", "normals", "adjSpaces", "cycleSources", "avgAdjLength", "cycleCurvatures"):
         assert_matches(getattr(tb, name), cpp(bundleName + "_" + name))
+    for name in ("oneRing", "innerAdjacencies"):
+        assert_matches(getattr(tb, name), cpp(bundleName + "_" + name))
+    assert_matches(np.column_stack([tb.connection.real, tb.connection.imag]), cpp(bundleName + "_connection"))
+    for name in ("connectionMass", "tangentSpaceMass"):
+        assert_sparse_matches(getattr(tb, name), cpp, bundleName + "_" + name)
 
 
 def test_extrinsic_power_field_matches_cpp(cpp_reference):
@@ -185,6 +190,9 @@ def test_topology_matches_cpp(cpp_reference, name):
     assert_matches(len(mesh.boundaryLoops), cpp(name + "_numBoundaryLoops"))
     for i, loop in enumerate(mesh.boundaryLoops):
         assert_matches(loop, cpp(name + "_boundaryLoop" + str(i)))
+    for array in ("TT", "EFi", "VE", "VF", "isBoundaryVertex", "GaussianCurvature", "FBx", "VBy"):
+        assert_matches(getattr(mesh, array), cpp(name + "_" + array))
+    assert_matches(np.column_stack([mesh.HV, mesh.HE, mesh.HF, mesh.nextH, mesh.twinH]), cpp(name + "_halfedges"))
 
 
 @pytest.mark.parametrize("name", ["fertility", "lilium"])

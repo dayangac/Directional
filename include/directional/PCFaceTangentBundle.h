@@ -54,7 +54,7 @@ public:
         cycleNormals = mesh->vertexNormals;
         
         //connection is the ratio of the complex representation of edges
-        connection.resize(mesh->EF.rows(),1);  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
+        connection = Eigen::VectorXcd::Zero(mesh->EF.rows());  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1); zero on boundary edges
         Eigen::MatrixXd edgeVectors(mesh->EF.rows(), 3);
         for (int i = 0; i < mesh->EF.rows(); i++) {
             if (mesh->EF(i, 0) == -1 || mesh->EF(i, 1) == -1)

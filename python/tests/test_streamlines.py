@@ -86,6 +86,16 @@ def test_segments_stay_inside_their_faces(sphere, TangentBundle):
         assert barycentric_coordinates(sphere, state.segOrigFace, points).min()>-1e-6
 
 
+def test_streamlines_stop_at_the_boundary():
+    #lilium has a boundary, where streamlines must end instead of continuing in another face
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "lilium.obj"))
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "lilium.rawfield"), dr.PCFaceTangentBundle(mesh))
+    data, state = trace(rawField, 200, 0.5*mesh.avgEdgeLength, np.arange(0, len(mesh.F), 40))
+    assert not np.all(state.segmentAlive)
+    for points in (state.segStart, state.segEnd):
+        assert barycentric_coordinates(mesh, state.segOrigFace, points).min()>-1e-6
+
+
 def test_automatic_seeds_cover_the_mesh(sphere):
     data, state = trace(raw_field(sphere), 0, 0.0, seedLocations=np.empty(0, dtype=int))
     assert len(data.sampleFaces)>10
