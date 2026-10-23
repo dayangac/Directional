@@ -11,6 +11,7 @@
 #include <nanobind/stl/vector.h>
 #include <directional/CartesianField.h>
 #include <directional/PolyVectorData.h>
+#include <directional/IntrinsicVertexTangentBundle.h>
 #include <directional/polyvector_field.h>
 #include <directional/polyvector_iteration_functions.h>
 #include <directional/polyvector_to_raw.h>
@@ -31,6 +32,13 @@ std::function<Result(const CartesianField&, const PolyVectorData&)> by_reference
     return [function](const CartesianField& pvField, const PolyVectorData& pvData){
         return nb::cast<Result>(function(nb::cast(pvField, nb::rv_policy::reference), nb::cast(pvData, nb::rv_policy::reference)));
     };
+}
+
+//conjugate() and conjugate_termination() read the principal curvatures through IntrinsicVertexTangentBundle.
+inline void require_conjugate_field(const CartesianField& pvField, const PolyVectorData& pvData)
+{
+    require(pvField.N==4 && pvData.signSymmetry, "conjugate fields are sign-symmetric 4-fields");
+    require(dynamic_cast<const directional::IntrinsicVertexTangentBundle*>(pvField.tb)!=nullptr, "conjugate fields need an IntrinsicVertexTangentBundle");
 }
 
 /***
@@ -93,12 +101,22 @@ void bind_polyvector(nb::module_& m)
                                         (terminationFunction ? by_reference<bool>(*terminationFunction) : directional::default_termination));
     }, "pvData"_a, "pvField"_a, "iterationFunctions"_a, "numIterations"_a=1, "terminationFunction"_a=nb::none());
 
+    m.def("hard_normalization", &directional::hard_normalization, "pvField"_a, "pvData"_a, nb::keep_alive<0, 1>());
     m.def("hard_rosy", &directional::hard_rosy, "pvField"_a, "pvData"_a, nb::keep_alive<0, 1>());
     m.def("soft_rosy", &directional::soft_rosy, "pvField"_a, "pvData"_a, nb::keep_alive<0, 1>());
     m.def("curl_projection", [](const CartesianField& pvField, const PolyVectorData& pvData){
         require(pvData.tb->discTangType()==directional::discTangTypeEnum::FACE_SPACES, "curl_projection only works on face-based fields");
         return directional::curl_projection(pvField, pvData);
     }, "pvField"_a, "pvData"_a, nb::keep_alive<0, 1>());
+    m.def("conjugate", [](const CartesianField& pvField, const PolyVectorData& pvData){
+        require_conjugate_field(pvField, pvData);
+        return directional::conjugate(pvField, pvData);
+    }, "pvField"_a, "pvData"_a, nb::keep_alive<0, 1>());
+    m.def("default_termination", &directional::default_termination, "pvField"_a, "pvData"_a);
+    m.def("conjugate_termination", [](const CartesianField& pvField, const PolyVectorData& pvData){
+        require_conjugate_field(pvField, pvData);
+        return directional::conjugate_termination(pvField, pvData);
+    }, "pvField"_a, "pvData"_a);
 
     m.def("polyvector_to_raw", [](const CartesianField& pvField, const bool signSymmetry, const bool normalizeRoots, const double rootTolerance){
         require(pvField.fieldType==fieldTypeEnum::POLYVECTOR_FIELD, "pvField must be a POLYVECTOR_FIELD");

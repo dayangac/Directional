@@ -226,3 +226,46 @@ def test_polyvector_field_keeps_bundle_alive(constraints):
     del mesh, pvData
     gc.collect()
     assert dr.polyvector_to_raw(pvField).extField.shape==(1280, 3*N)
+
+
+def test_hard_normalization_gives_unit_vectors(ftb, constraints):
+    _, pvField = iterated_field(ftb, constraints, [dr.hard_normalization], 1)
+    vectors = complex_field(dr.polyvector_to_raw(pvField))
+    np.testing.assert_allclose(np.abs(vectors), 1.0, atol=1e-12)
+    assert not dr.default_termination(pvField, dr.PolyVectorData(ftb, N))
+
+
+@pytest.fixture(scope="module")
+def torus():
+    return dr.readOBJ(str(TUTORIAL_DATA_PATH / "torus.obj"))
+
+
+#the second fundamental form II(v1, v2) of the first two vectors at each vertex, which is zero for conjugate directions
+def second_fundamental_form(mesh, pvField):
+    rawField = dr.polyvector_to_raw(pvField).extField
+    curvatures, minDirections, maxDirections = mesh.vertexPrincipalCurvatures, mesh.minVertexPrincipalDirections, mesh.maxVertexPrincipalDirections
+    return sum(curvatures[:, k]*np.sum(rawField[:, :3]*directions, axis=1)*np.sum(rawField[:, 3:6]*directions, axis=1)
+               for k, directions in enumerate((minDirections, maxDirections)))
+
+
+def test_conjugate_projects_on_conjugate_directions(torus):
+    tb = dr.IntrinsicVertexTangentBundle(torus)
+    pvData = pv_data(tb, np.array([0]), torus.minVertexPrincipalDirections[[0]]+0.3*torus.maxVertexPrincipalDirections[[0]], np.array([-1.0]))
+    pvData.iterationMode = True
+    pvField = dr.polyvector_field(pvData)
+    assert np.max(np.abs(second_fundamental_form(torus, pvField)))>0.1
+    assert not dr.conjugate_termination(pvField, pvData)
+    conjugateField = dr.conjugate(pvField, pvData)
+    np.testing.assert_allclose(second_fundamental_form(torus, conjugateField), 0.0, atol=1e-6)
+    assert dr.conjugate_termination(conjugateField, pvData)
+
+
+def test_conjugate_rejects_other_fields(ftb, constraints, torus):
+    pvData = pv_data(ftb, *constraints, np.ones(len(constraints[0])))
+    pvField = dr.polyvector_field(pvData)
+    for function in (dr.conjugate, dr.conjugate_termination):
+        with pytest.raises(ValueError):  #a face-based field
+            function(pvField, pvData)
+    vertexData = pv_data(dr.IntrinsicVertexTangentBundle(torus), np.array([0]), np.array([[1.0, 0.0, 0.0]]), np.array([-1.0]), 2)
+    with pytest.raises(ValueError):  #not a 4-field
+        dr.conjugate(dr.polyvector_field(vertexData), vertexData)

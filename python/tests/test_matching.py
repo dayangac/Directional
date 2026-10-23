@@ -8,6 +8,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import scipy.sparse
+import scipy.sparse.linalg
 
 import directional as dr
 
@@ -125,3 +127,60 @@ def test_index_prescription_rejects_bad_input(prescribedField):
         dr.index_prescription(np.zeros(3, dtype=int), 2, 0.0, prescribedField)
     with pytest.raises(ValueError):
         dr.index_prescription(prescribed_indices(prescribedField, [], []), 0, 0.0, prescribedField)
+
+
+def test_effort_to_indices_recovers_the_singularities(lilium):
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "lilium.rawfield"), lilium.tb)
+    dr.principal_matching(rawField)
+    singLocalCycles, singIndices = rawField.singLocalCycles.copy(), rawField.singIndices.copy()
+    rawField.set_singularities(np.empty(0, dtype=int), np.empty(0, dtype=int))
+    dr.effort_to_indices(rawField)
+    np.testing.assert_array_equal(rawField.singLocalCycles, singLocalCycles)
+    np.testing.assert_array_equal(rawField.singIndices, singIndices)
+
+
+def test_effort_to_indices_on_arrays(lilium):
+    tb = lilium.tb
+    indices = dr.effort_to_indices(tb.cycles, lilium.effort[tb.innerAdjacencies], tb.cycleCurvatures, lilium.N)
+    assert indices.shape==(tb.cycles.shape[0],)
+    np.testing.assert_array_equal(np.flatnonzero(indices[tb.local2Cycle]), lilium.singLocalCycles)
+    np.testing.assert_array_equal(indices[tb.local2Cycle[lilium.singLocalCycles]], lilium.singIndices)
+    with pytest.raises(ValueError):  #not naturally integer
+        dr.effort_to_indices(tb.cycles, lilium.effort[tb.innerAdjacencies]+0.1, tb.cycleCurvatures, lilium.N)
+    with pytest.raises(ValueError):
+        dr.effort_to_indices(tb.cycles, lilium.effort, tb.cycleCurvatures, lilium.N)
+    with pytest.raises(ValueError):  #no matching yet
+        dr.effort_to_indices(dr.CartesianField(tb, dr.fieldTypeEnum.RAW_FIELD, lilium.N))
+
+
+def test_project_curl_gives_the_closest_curl_free_field(lilium):
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "lilium.rawfield"), lilium.tb)
+    dr.curl_matching(rawField)
+    mesh = lilium.tb.mesh
+    C = dr.curl_matrix_2D(mesh, N=rawField.N, matching=rawField.matching)
+    assert np.max(np.abs(C@rawField.extField.ravel()))>1e-3
+    curlFreeField = dr.project_curl(rawField)
+    np.testing.assert_allclose(C@curlFreeField.extField.ravel(), 0.0, atol=1e-12)
+    #a projection: a curl-free field stays the same, and the change is in the range of the (intrinsic) curl transpose,
+    #so orthogonal to all curl-free fields
+    np.testing.assert_allclose(dr.project_curl(curlFreeField).extField, curlFreeField.extField, atol=1e-12)
+    change = (rawField.intField-curlFreeField.intField).ravel()
+    Cintrinsic = dr.curl_matrix_2D(mesh, True, rawField.N, rawField.matching)
+    multipliers = scipy.sparse.linalg.lsqr(Cintrinsic.T, change, atol=1e-14, btol=1e-14, iter_lim=100000)[0]
+    assert np.linalg.norm(Cintrinsic.T@multipliers-change)<1e-8*np.linalg.norm(change)
+
+
+def test_project_curl_with_an_objective(lilium):
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "lilium.rawfield"), lilium.tb)
+    dr.curl_matching(rawField)
+    numDofs = rawField.intField.size
+    #the identity objective is the default
+    identity = scipy.sparse.identity(numDofs, format="csc")
+    np.testing.assert_allclose(dr.project_curl(rawField, objMatrix=identity, objRhs=rawField.flatten(True)).extField,
+                               dr.project_curl(rawField).extField, atol=1e-10)
+    with pytest.raises(ValueError):
+        dr.project_curl(rawField, objMatrix=identity)
+    with pytest.raises(ValueError):
+        dr.project_curl(rawField, objMatrix=scipy.sparse.identity(3, format="csc"), objRhs=np.zeros(3))
+    with pytest.raises(ValueError):  #no matching
+        dr.project_curl(dr.CartesianField(lilium.tb, dr.fieldTypeEnum.RAW_FIELD, lilium.N))
