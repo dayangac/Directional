@@ -16,3 +16,25 @@ viewer = ["polyscope"]
 [tool.scikit-build]
 wheel.packages = ["directional"]
 build-dir = "build/{wheel_tag}"
+
+[tool.cibuildwheel]
+build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
+skip = "*-win32 *_i686"
+test-requires = ["pytest"]
+test-command = "pytest {package}/tests -q"
+
+#meshing needs GMP, which auditwheel bundles into the wheel
+[tool.cibuildwheel.linux]
+before-all = "yum install -y gmp-devel"
+
+[[tool.cibuildwheel.overrides]]
+select = "*-musllinux*"
+before-all = "apk add gmp-dev"
+
+#delocate bundles Homebrew's GMP (installed before cibuildwheel runs), so the wheel targets the macOS version it was built for
+[tool.cibuildwheel.macos]
+environment = { MACOSX_DEPLOYMENT_TARGET = "$(otool -l $(brew --prefix gmp)/lib/libgmp.dylib | awk '/minos/ {print $2; exit}')" }
+
+#no GMP on Windows, so no meshing
+[tool.cibuildwheel.windows]
+config-settings = { "cmake.define.DIRECTIONAL_MESHING" = "OFF" }
