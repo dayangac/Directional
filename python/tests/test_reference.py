@@ -280,3 +280,24 @@ def test_integration_matches_cpp(cpp_reference):
         isoV, isoE, _, _, funcNum = dr.branched_isolines(meshCut.V, meshCut.F, NFunction)
         for array, value in (("isoV", isoV), ("isoE", isoE), ("funcNum", funcNum)):
             assert_matches(value, cpp(name + "_" + array))
+
+
+@pytest.mark.skipif(not hasattr(dr, "mesher"), reason="the module was built without GMP, so without meshing")
+def test_meshing_matches_cpp(cpp_reference, gmp_flags):
+    cpp = cpp_reference("meshing", gmp_flags)
+    mesh = dr.readOFF(str(TUTORIAL_DATA_PATH / "vase.off"))
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "vase-4.rawfield"), dr.PCFaceTangentBundle(mesh))
+    dr.principal_matching(rawField)
+    intData = dr.IntegrationData(rawField.N)
+    meshCut, combedField = dr.setup_integration(rawField, intData)
+    intData.integralSeamless, intData.roundSeams = True, False
+    dr.integrate(combedField, intData, meshCut)
+    V, D, F = dr.mesher(mesh, dr.setup_mesher(meshCut, intData))
+    assert cpp("success")[0, 0]==1
+    assert_matches(V, cpp("VPolyMesh"))
+    assert_matches(D, cpp("DPolyMesh"))
+    #the C++ output leaves the entries past each face's valence uninitialized
+    cppF = cpp("FPolyMesh")
+    assert F.shape==cppF.shape
+    for f in range(len(D)):
+        np.testing.assert_array_equal(F[f, :D[f]], cppF[f, :D[f]])

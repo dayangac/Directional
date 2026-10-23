@@ -17,6 +17,9 @@ void bind_polyvector(nb::module_& m);
 void bind_fem(nb::module_& m);
 void bind_dec(nb::module_& m);
 void bind_integration(nb::module_& m);
+#ifdef DIRECTIONAL_MESHING
+void bind_meshing(nb::module_& m);
+#endif
 
 NB_MODULE(_directional, m)
 {
@@ -29,4 +32,7 @@ NB_MODULE(_directional, m)
     bind_fem(m);
     bind_dec(m);
     bind_integration(m);
+#ifdef DIRECTIONAL_MESHING
+    bind_meshing(m);
+#endif
 }

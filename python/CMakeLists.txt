@@ -26,4 +26,21 @@ target_include_directories(_directional PRIVATE
     "${DIRECTIONAL_ROOT}/external/eigen"
 )
 
+#Meshing uses exact arithmetic in GMP, so it is only built when GMP is found (GMP_DIR can point to it).
+option(DIRECTIONAL_MESHING "Build meshing if GMP is found" ON)
+if(DIRECTIONAL_MESHING)
+    find_path(GMP_INCLUDE_DIR NAMES gmpxx.h HINTS $ENV{GMP_DIR}/include)
+    find_library(GMP_LIBRARY NAMES gmp HINTS $ENV{GMP_DIR}/lib)
+    find_library(GMPXX_LIBRARY NAMES gmpxx HINTS $ENV{GMP_DIR}/lib)
+endif()
+if(DIRECTIONAL_MESHING AND GMP_INCLUDE_DIR AND GMP_LIBRARY AND GMPXX_LIBRARY)
+    message(STATUS "GMP found, building meshing: ${GMP_INCLUDE_DIR}")
+    target_sources(_directional PRIVATE src/bind_meshing.cpp)
+    target_compile_definitions(_directional PRIVATE USE_GMP_ENABLED DIRECTIONAL_MESHING)
+    target_include_directories(_directional PRIVATE "${GMP_INCLUDE_DIR}")
+    target_link_libraries(_directional PRIVATE "${GMPXX_LIBRARY}" "${GMP_LIBRARY}")
+else()
+    message(WARNING "GMP not found, building without meshing")
+endif()
+
 install(TARGETS _directional LIBRARY DESTINATION directional)

@@ -25,27 +25,37 @@ class Reference:
         return np.loadtxt(self.outDir / (matrix + ".txt"), ndmin=2)
 
 
-#Compiles a reference program in tests/reference against the C++ library (cached by the sources it depends on),
-#runs it on the tutorial data, and returns a Reference that loads the matrices it wrote.
+#Compiles a reference program in tests/reference against the C++ library (cached by the sources it depends on and the
+#extra compiler flags), runs it on the tutorial data, and returns a Reference that loads the matrices it wrote.
 @pytest.fixture(scope="session")
 def cpp_reference(request, tmp_path_factory):
     if CXX is None:
         pytest.skip("no C++ compiler to build the reference programs")
     outputs = {}
 
-    def run(name):
+    def run(name, flags=()):
         if name not in outputs:
             source = REFERENCE_PATH / (name + ".cpp")
             sources = [source, REFERENCE_PATH / "write.h"]+sorted((DIRECTIONAL_ROOT / "include").rglob("*.[hc]*"))
-            key = hashlib.sha256(b"".join(path.read_bytes() for path in sources)).hexdigest()[:16]
+            key = hashlib.sha256(b"".join(path.read_bytes() for path in sources)+" ".join(flags).encode()).hexdigest()[:16]
             cacheDir = (request.config.cache.mkdir("cpp_reference") if request.config.cache else tmp_path_factory.mktemp("bin"))
             binary = cacheDir / (name + "-" + key)
             if not binary.exists():
                 subprocess.run([CXX, "-std=c++20", "-O2", "-DNDEBUG", "-I", str(DIRECTIONAL_ROOT / "include"),
-                                "-I", str(DIRECTIONAL_ROOT / "external" / "eigen"), str(source), "-o", str(binary)], check=True)
+                                "-I", str(DIRECTIONAL_ROOT / "external" / "eigen"), str(source), "-o", str(binary), *flags], check=True)
             outDir = tmp_path_factory.mktemp(name)
             subprocess.run([str(binary), str(DIRECTIONAL_ROOT / "tutorial" / "data"), str(outDir)], check=True, stdout=subprocess.DEVNULL)
             outputs[name] = Reference(outDir)
         return outputs[name]
 
     return run
+
+
+#Compiler flags for GMP, which the meshing reference needs.
+@pytest.fixture(scope="session")
+def gmp_flags():
+    pkgConfig = shutil.which("pkg-config")
+    result = subprocess.run([pkgConfig, "--cflags", "--libs", "gmpxx"], capture_output=True, text=True) if pkgConfig else None
+    if result is None or result.returncode!=0:
+        pytest.skip("pkg-config cannot find GMP")
+    return ["-DUSE_GMP_ENABLED"]+result.stdout.split()
