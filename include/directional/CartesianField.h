@@ -86,7 +86,7 @@ public:
     
     Eigen::MatrixXcd inline get_complex_intrinsic_field() const{
         Eigen::MatrixXcd complexIntField(intField.rows(),intField.cols()/2);
-        for (int i=0;i<N;i++){
+        for (int i=0;i<complexIntField.cols();i++){  //a single complex number for power fields
             complexIntField.col(i).real() = intField.col(2*i);
             complexIntField.col(i).imag() = intField.col(2*i+1);
         }

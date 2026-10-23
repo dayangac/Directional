@@ -275,3 +275,65 @@ def test_read_singularities_rejects_other_degree(sphere, tmp_path):
 def test_read_raw_field_missing_file(sphere):
     with pytest.raises(RuntimeError):
         dr.read_raw_field(str(TUTORIAL_DATA_PATH / "missing.rawfield"), dr.PCFaceTangentBundle(sphere))
+
+
+def test_field_representations(sphere):
+    rawField = dr.power_to_raw(dr.power_field(dr.PCFaceTangentBundle(sphere), np.array([0]), np.array([[1.0, 0.0, 0.0]]), np.array([-1.0]), 4), 4)
+    np.testing.assert_array_equal(rawField.get_complex_intrinsic_field(), rawField.intField[:, 0::2]+1j*rawField.intField[:, 1::2])
+    np.testing.assert_array_equal(rawField.flatten(), rawField.extField.ravel())
+    np.testing.assert_array_equal(rawField.flatten(isIntrinsic=True), rawField.intField.ravel())
+    pvField = dr.raw_to_polyvector(rawField)
+    assert pvField.get_complex_intrinsic_field().shape==(len(sphere.F), 4)
+    #a power field has a single complex number per space
+    powerField = dr.power_field(dr.PCFaceTangentBundle(sphere), np.array([0]), np.array([[1.0, 0.0, 0.0]]), np.array([-1.0]), 4)
+    np.testing.assert_array_equal(powerField.get_complex_intrinsic_field(), powerField.intField[:, [0]]+1j*powerField.intField[:, [1]])
+    with pytest.raises(ValueError):
+        pvField.flatten()
+
+
+def test_set_singularities(sphere):
+    rawField = dr.CartesianField(dr.PCFaceTangentBundle(sphere), dr.fieldTypeEnum.RAW_FIELD, 4)
+    rawField.set_singularities(np.array([3, 70]), np.array([1, -1]))
+    np.testing.assert_array_equal(rawField.singLocalCycles, [3, 70])
+    np.testing.assert_array_equal(rawField.singIndices, [1, -1])
+    with pytest.raises(ValueError):
+        rawField.set_singularities(np.array([3]), np.array([1, 1]))
+    with pytest.raises(ValueError):
+        rawField.set_singularities(np.array([len(sphere.V)]), np.array([1]))
+
+
+def test_rotation_to_raw_without_rotations_is_parallel(sphere):
+    ftb = dr.PCFaceTangentBundle(sphere)
+    rawField = dr.rotation_to_raw(ftb, np.zeros(len(sphere.EV)), N, 0.3)
+    assert rawField.fieldType==dr.fieldTypeEnum.RAW_FIELD and rawField.N==N
+    vectors = rawField.get_complex_intrinsic_field()
+    np.testing.assert_allclose(np.abs(vectors), 1.0, atol=1e-12)
+    np.testing.assert_allclose(vectors[:, 1:], vectors[:, :-1]*np.exp(2j*np.pi/N), atol=1e-12)
+    #globalRotation is the angle of the power vector N*angle on the first face (see index_prescription)
+    assert np.angle(vectors[0, 0]**N)==pytest.approx(0.3)
+    dr.principal_matching(rawField)
+    assert np.sum(rawField.singIndices)==N*sphere.eulerChar
+    with pytest.raises(ValueError):
+        dr.rotation_to_raw(ftb, np.zeros(3), N, 0.0)
+
+
+def test_rotation_to_raw_gives_the_prescribed_field(sphere):
+    ftb = dr.PCFaceTangentBundle(sphere)
+    cycleIndices = np.zeros(ftb.cycles.shape[0], dtype=int)
+    cycleIndices[ftb.local2Cycle[[0, 100]]] = N
+    prescribedField = dr.CartesianField(ftb, dr.fieldTypeEnum.RAW_FIELD, N)
+    rotationAngles, _ = dr.index_prescription(cycleIndices, N, 0.0, prescribedField)
+    np.testing.assert_allclose(dr.rotation_to_raw(ftb, rotationAngles, N, 0.0).extField, prescribedField.extField, atol=1e-12)
+
+
+def test_singularities_file_roundtrip(sphere, tmp_path):
+    fileName = str(tmp_path / "sphere.sings")
+    dr.write_singularities(fileName, N, np.array([3, 70]), np.array([1, -1]))
+    rawField = dr.CartesianField(dr.PCFaceTangentBundle(sphere), dr.fieldTypeEnum.RAW_FIELD, N)
+    dr.read_singularities(fileName, rawField)
+    np.testing.assert_array_equal(rawField.singLocalCycles, [3, 70])
+    np.testing.assert_array_equal(rawField.singIndices, [1, -1])
+    with pytest.raises(RuntimeError):
+        dr.write_singularities(str(tmp_path / "missing" / "sphere.sings"), N, np.array([3]), np.array([1]))
+    with pytest.raises(ValueError):
+        dr.write_singularities(fileName, N, np.array([3]), np.array([1, 1]))

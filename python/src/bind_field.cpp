@@ -14,6 +14,8 @@
 #include <directional/principal_matching.h>
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
+#include <directional/rotation_to_raw.h>
+#include <directional/write_singularities.h>
 #include <directional/write_raw_field.h>
 #include "utils.h"
 
@@ -64,7 +66,18 @@ void bind_field(nb::module_& m)
         require(extField.rows()==field.tb->numSpaces && extField.cols()==3*vectors_per_space(field),
                 "extField must be #spaces by 3N (#spaces by 3 for power fields)");
         field.set_extrinsic_field(extField);
-    }, "extField"_a);
+    }, "extField"_a)
+    .def("get_complex_intrinsic_field", &CartesianField::get_complex_intrinsic_field)
+    .def("flatten", [](const CartesianField& field, const bool isIntrinsic){
+        require(field.fieldType==fieldTypeEnum::RAW_FIELD, "flatten() only works on raw fields");
+        return field.flatten(isIntrinsic);
+    }, "isIntrinsic"_a=false)
+    .def("set_singularities", [](CartesianField& field, const Eigen::VectorXi& singLocalCycles, const Eigen::VectorXi& singIndices){
+        require(singLocalCycles.size()==singIndices.size(), "singLocalCycles and singIndices must have the same length");
+        require(singLocalCycles.size()==0 || (singLocalCycles.minCoeff()>=0 && singLocalCycles.maxCoeff()<field.tb->local2Cycle.size()),
+                "singLocalCycles contains out-of-range local cycles");
+        field.set_singularities(singLocalCycles, singIndices);
+    }, "singLocalCycles"_a, "singIndices"_a);
 
     m.def("power_field", [](const TangentBundle& tb,
                             const Eigen::VectorXi& constSpaces,
@@ -120,6 +133,20 @@ void bind_field(nb::module_& m)
         if (!directional::read_singularities(fileName, field))
             throw std::runtime_error("could not read " + fileName);
     }, "fileName"_a, "field"_a);
+
+    m.def("rotation_to_raw", [](const TangentBundle& tb, const Eigen::VectorXd& rotationAngles, const int N, const double globalRotation){
+        require(N>0, "N must be positive");
+        require(rotationAngles.size()==tb.adjSpaces.rows(), "rotationAngles must have a value per adjacency of the tangent bundle");
+        CartesianField field;
+        directional::rotation_to_raw(tb, rotationAngles, N, globalRotation, field);
+        return field;
+    }, "tb"_a, "rotationAngles"_a, "N"_a, "globalRotation"_a, nb::keep_alive<0, 1>());
+
+    m.def("write_singularities", [](const std::string& fileName, const int N, const Eigen::VectorXi& singLocalCycles, const Eigen::VectorXi& singIndices){
+        require(singLocalCycles.size()==singIndices.size(), "singLocalCycles and singIndices must have the same length");
+        if (!directional::write_singularities(fileName, N, singLocalCycles, singIndices))
+            throw std::runtime_error("could not write " + fileName);
+    }, "fileName"_a, "N"_a, "singLocalCycles"_a, "singIndices"_a);
 
     m.def("write_raw_field",[](const std::string& fileName, const CartesianField& rawField, const bool high_precision){
         if (!directional::write_raw_field(fileName, rawField, high_precision))
