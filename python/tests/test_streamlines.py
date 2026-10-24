@@ -119,6 +119,10 @@ def test_streamlines_init_rejects_bad_input(sphere):
             dr.streamlines_init(*args, dr.StreamlineData(), dr.StreamlineState())
 
 
+def test_streamlines_init_rejects_extrinsic_vertex_fields(sphere):
+    with pytest.raises(ValueError):
+        dr.streamlines_init(raw_field(sphere, dr.ExtrinsicVertexTangentBundle), SEEDS, 3.0, dr.StreamlineData(), dr.StreamlineState())
+
 def test_streamlines_next_rejects_uninitialized_or_mismatched_state(sphere):
     with pytest.raises(ValueError):
         dr.streamlines_next(dr.StreamlineData(), dr.StreamlineState(), 0.1)

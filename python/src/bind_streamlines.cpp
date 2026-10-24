@@ -63,9 +63,11 @@ void bind_streamlines(nb::module_& m)
                                  StreamlineData& data,
                                  StreamlineState& state){
         require(field.fieldType==fieldTypeEnum::RAW_FIELD, "field must be a RAW_FIELD");
-        const directional::TriMesh* mesh = (field.tb->discTangType()==discTangTypeEnum::FACE_SPACES ?
-                                            ((const directional::PCFaceTangentBundle*)field.tb)->mesh :
-                                            ((const directional::IntrinsicVertexTangentBundle*)field.tb)->mesh);
+        //the library casts vertex bundles to IntrinsicVertexTangentBundle, so other bundles are rejected
+        const auto* ftb = dynamic_cast<const directional::PCFaceTangentBundle*>(field.tb);
+        const auto* vtb = dynamic_cast<const directional::IntrinsicVertexTangentBundle*>(field.tb);
+        require(ftb!=nullptr || vtb!=nullptr, "field must be on a PCFaceTangentBundle or an IntrinsicVertexTangentBundle");
+        const directional::TriMesh* mesh = (ftb!=nullptr ? ftb->mesh : vtb->mesh);
         require(seedLocations.size()==0 || (seedLocations.minCoeff()>=0 && seedLocations.maxCoeff()<mesh->F.rows()),
                 "seedLocations contains out-of-range face indices");
         require(seedLocations.size()>0 || distRatio>=0, "distRatio must be non-negative");
