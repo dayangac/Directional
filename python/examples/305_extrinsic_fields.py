@@ -176,6 +176,8 @@ viewer.set_surface_mesh(mesh)
 viewer.set_cartesian_field(rawFaceField, "Face-Based Field")
 viewer.set_cartesian_field(rawVertexField, "Vertex-Based Field")
 viewer.set_raw_field(newSources, newRawField, "Interpolated Field", 0.3*mesh.avgEdgeLength/interpResolution)
+#the exact singularities replace the ones at the vertices, as update_singularities_locations does in C++
+ps.remove_point_cloud("Vertex-Based Field singularities")
 viewer.update_singularities_locations(rawVertexField, singLocations, "Exact Singularities")
 update_visualization()
 ps.set_user_callback(callbackFunc)
