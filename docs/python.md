@@ -10,7 +10,7 @@ From the main Directional folder:
 pip install ./python
 ```
 
-This builds the bindings with your C++ compiler (C++20 is required), and installs `numpy` and `scipy`. The viewer helpers and the examples use [polyscope](https://polyscope.run/py/), which is installed with `pip install polyscope` (or `pip install "./python[viewer]"`).
+This builds the bindings with your C++ compiler (C++20 is required), and installs `numpy` and `scipy`. The viewer helpers and the examples use [polyscope](https://polyscope.run/py/), which is installed with `pip install polyscope` (or `pip install "./python[viewer]"`). The package includes type stubs, so `help()` and editors show the signatures and default values.
 
 Meshing (tutorial 505) uses exact arithmetic in [GMP](https://gmplib.org/), so it is only built when GMP is found, for instance from `brew install gmp` or `apt install libgmp-dev`. A different GMP installation can be given with the `GMP_DIR` environment variable, and meshing can be turned off with:
 

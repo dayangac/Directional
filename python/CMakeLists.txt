@@ -43,4 +43,14 @@ else()
     message(WARNING "GMP not found, building without meshing")
 endif()
 
+#Type stubs, for signatures in help() and in editors
+nanobind_add_stub(_directional_stub
+    MODULE _directional
+    OUTPUT _directional.pyi
+    MARKER_FILE py.typed
+    PYTHON_PATH $<TARGET_FILE_DIR:_directional>
+    DEPENDS _directional
+)
+
 install(TARGETS _directional LIBRARY DESTINATION directional)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/_directional.pyi" "${CMAKE_CURRENT_BINARY_DIR}/py.typed" DESTINATION directional)
