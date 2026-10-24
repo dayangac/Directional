@@ -71,6 +71,40 @@ ps.show()
 
 Instead of a field number, the functions take the polyscope names of the structures (for instance, `set_uv(UV, "UV", meshName="Cut Mesh")`), and return the polyscope structures they create, so they can be changed with the polyscope API.
 
+## How the bindings are built
+
+The bindings use the following tools:
+
+- [nanobind](https://nanobind.readthedocs.io/) generates the extension module `directional._directional`, and converts Eigen matrices to NumPy arrays and Eigen sparse matrices to `scipy.sparse` matrices. It also generates the type stubs (`_directional.pyi`) at build time.
+- [scikit-build-core](https://scikit-build-core.readthedocs.io/) lets `pip` build the module with CMake (`python/pyproject.toml` and `python/CMakeLists.txt`). The compiled module includes the library headers and the bundled Eigen directly, so the C++ library does not need to be installed.
+- [GMP](https://gmplib.org/) is optional, and only needed for meshing (see above).
+- [cibuildwheel](https://cibuildwheel.pypa.io/) builds the binary wheels for Linux, macOS and Windows in `.github/workflows/wheels.yml`. The Linux and macOS wheels bundle GMP (with auditwheel and delocate), and the Windows wheels are built without meshing.
+- [polyscope](https://polyscope.run/py/) is used by `directional.viewer`, which is pure Python.
+- [pytest](https://pytest.org/) runs the tests.
+
+The code is organized as follows:
+
+```
+python/
+  pyproject.toml      package and wheel configuration
+  CMakeLists.txt      module, optional meshing, type stubs
+  src/module.cpp      creates the module and calls the bind_* functions
+  src/bind_*.cpp      one file per part of the library (mesh, tangent bundles, fields, streamlines,
+                      matching, PolyVectors, FEM, DEC, integration, meshing)
+  directional/        __init__.py (re-exports the module) and viewer.py
+  examples/           Python versions of the tutorial examples
+  tests/              pytest tests, and C++ reference programs in tests/reference
+```
+
+The bindings are kept thin. Every class and function is bound directly from the headers, and a short wrapper is written only to return output arguments, to keep referenced objects alive, or to check input that C++ only asserts. Internal helpers, the deprecated headers and the C++ viewer are not bound.
+
+When a binding is added or changed in C++, the module is rebuilt with `pip install ./python`. For faster rebuilds during development:
+
+```bash
+pip install nanobind scikit-build-core numpy scipy
+pip install --no-build-isolation ./python
+```
+
 ## Tests
 
 The tests are in `python/tests` and run with:

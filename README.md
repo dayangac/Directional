@@ -1,7 +1,7 @@
 # Directional - A Directional-Field Processing Library
 
 
-Directional is a C++ library for creating, manipulating, and visualizing directional fields on 3D meshes. See [website](https://avaxman.github.io/Directional) for more details.
+Directional is a C++ library for creating, manipulating, and visualizing directional fields on 3D meshes. See [website](https://avaxman.github.io/Directional) for more details. Directional can also be used from [Python](https://avaxman.github.io/Directional/python/).
 
 Directional won the [SGP 2021 software award](http://awards.geometryprocessing.org/)!
 

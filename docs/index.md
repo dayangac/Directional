@@ -47,6 +47,9 @@ make
 ```
 This should properly set up the tutorial project, with the individual chapters as subprojects, and create project makefiles upon which you can build it using your favourite compiler. For windows, we recommend to use `cmake-gui ..` and follow the instructions to create a compilable Visual Studio file.
 
+## Python
+Directional can also be used from Python, with the same functions and the Python versions of the tutorial examples; see [Python bindings](python.md).
+
 ## How to Contribute
 
 If you are interested in joining development, please fork the repository and submit a [pull request](https://help.github.com/articles/using-pull-requests/) with your changes.
