@@ -22,8 +22,8 @@ inline void barycentric_subdivision(const Eigen::MatrixXd& V,
                                     Eigen::MatrixXi& FFine)
 {
     VFine.resize(V.rows()+F.rows(),3);
-    VFine.block(0,0,V.rows(),3);
-    for (int i=0;i<FFine.rows();i++)
+    VFine.block(0,0,V.rows(),3) = V;
+    for (int i=0;i<F.rows();i++)
         VFine.row(V.rows()+i) = (V.row(F(i,0))+V.row(F(i,1))+V.row(F(i,2)))/3.0;
     
     FFine.resize(3*F.rows(),3);

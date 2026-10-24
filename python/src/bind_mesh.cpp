@@ -6,6 +6,9 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
+#include <nanobind/stl/pair.h>
+#include <nanobind/stl/tuple.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 #include <directional/TriMesh.h>
@@ -13,6 +16,8 @@
 #include <directional/readOFF.h>
 #include <directional/readDMAT.h>
 #include <directional/writeOBJ.h>
+#include <directional/dual_cycles.h>
+#include <directional/barycentric_subdivision.h>
 #include "utils.h"
 
 namespace nb = nanobind;
@@ -106,6 +111,25 @@ void bind_mesh(nb::module_& m)
             throw std::runtime_error("could not read " + fileName);
         return dmat;
     }, "fileName"_a);
+    //Returns (basisCycles, cycleCurvature, vertex2cycle, innerEdges).
+    m.def("dual_cycles", [](const TriMesh& mesh){
+        Eigen::SparseMatrix<double> basisCycles;
+        Eigen::VectorXd cycleCurvature;
+        Eigen::VectorXi vertex2cycle, innerEdges;
+        directional::dual_cycles(mesh, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
+        return std::make_tuple(basisCycles, cycleCurvature, vertex2cycle, innerEdges);
+    }, "mesh"_a);
+
+    //Returns (VFine, FFine), with a new vertex at the barycenter of each face.
+    m.def("barycentric_subdivision", [](const Eigen::MatrixXd& V, const Eigen::MatrixXi& F){
+        require(V.cols()==3 && F.cols()==3, "V and F must be #V by 3 and #F by 3");
+        require(F.size()==0 || (F.minCoeff()>=0 && F.maxCoeff()<V.rows()), "F contains out-of-range vertex indices");
+        Eigen::MatrixXd VFine;
+        Eigen::MatrixXi FFine;
+        directional::barycentric_subdivision(V, F, VFine, FFine);
+        return std::make_pair(VFine, FFine);
+    }, "V"_a, "F"_a);
+
     m.def("writeOBJ", [](const std::string& fileName, const TriMesh& mesh, const Eigen::MatrixXd& TC, const Eigen::MatrixXi& FTC,
                          const std::string& mtlFileName, const std::string& textureName){
         require(TC.cols()>=2, "TC must be #TC by 2");

@@ -54,6 +54,16 @@ void bind_fem(nb::module_& m)
         return directional::face_vector_rotation_matrix_2D<double>(mesh, isIntrinsic, N);
     }, "mesh"_a, "isIntrinsic"_a=false, "N"_a=1);
 
+    m.def("conf_mass_matrix_2D", [](const TriMesh& mesh, const int dim){
+        require(dim>0, "dim must be positive");
+        return directional::conf_mass_matrix_2D<double>(mesh, dim);
+    }, "mesh"_a, "dim"_a=1);
+
+    m.def("lumped_voronoi_mass_matrix_2D", [](const TriMesh& mesh, const int dim){
+        require(dim>0, "dim must be positive");
+        return directional::lumped_voronoi_mass_matrix_2D<double>(mesh, dim);
+    }, "mesh"_a, "dim"_a=1);
+
     m.def("face_mass_matrix_2D", [](const TriMesh& mesh, const bool isInverse, const int dim){
         require(dim>0, "dim must be positive");
         return directional::face_mass_matrix_2D<double>(mesh, isInverse, dim);

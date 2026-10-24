@@ -82,7 +82,9 @@ inline void poisson_disk_sampling(const directional::TriMesh& mesh,
     directional::sparse_identity(mesh.F.rows(), mesh.F.rows(), matMult);
     for (int i=0;i<indirection;i++){
         matMult=matMult*adjMat;
+        matMult.coeffs().setOnes();  //only the pattern matters, and the path counts overflow
         newAdjMat+=matMult;
+        newAdjMat.coeffs().setOnes();
     }
     
     adjMat.setIdentity();

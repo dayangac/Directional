@@ -64,6 +64,16 @@ void bind_dec(nb::module_& m)
         return std::make_pair(prevCochain, exactCochain);
     }, "d"_a, "M"_a, "cochain"_a, "gaugeFixing"_a=false);
 
+    //Returns (coexactCochain, nextCochain), where d is the differential from the cochain to the next one.
+    m.def("project_coexact", [](const SparseMatrix& d, const SparseMatrix& M, const SparseMatrix& MNext, const Eigen::VectorXd& cochain, const int k){
+        require(cochain.size()==d.cols(), "cochain must have a value per column of d");
+        require_metric(M, d.cols(), "M must be square, of the size of cochain");
+        require_metric(MNext, d.rows(), "MNext must be square, of the size of the rows of d");
+        Eigen::VectorXd coexactCochain, nextCochain;
+        directional::project_coexact<double>(d, M, MNext, cochain, k, coexactCochain, nextCochain);
+        return std::make_pair(coexactCochain, nextCochain);
+    }, "d"_a, "M"_a, "MNext"_a, "cochain"_a, "k"_a);
+
     //Returns (exactCochain, coexactCochain, harmCochain, prevCochain, nextCochain).
     m.def("hodge_decomposition", [](const SparseMatrix& d, const SparseMatrix& dNext, const SparseMatrix& M, const SparseMatrix& MNext,
                                     const Eigen::VectorXd& cochain, const int k, const bool gaugeFixing){

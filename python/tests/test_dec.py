@@ -139,3 +139,20 @@ def test_cochain_functions_reject_mismatched_sizes(torus):
         dr.hodge_decomposition(d0, d1, h2, h2, np.zeros(len(torus.EV)), 1)
     with pytest.raises(ValueError):
         dr.cohomology_basis(d0, d1, h1, 0)
+
+
+def test_project_coexact_finds_the_coexact_part(torus):
+    d0, d1 = dr.d0_matrix(torus), dr.d1_matrix(torus)
+    h1, _ = dr.hodge_star_1_matrix(torus)
+    h2, _ = dr.hodge_star_2_matrix(torus)
+    oneForm = np.sin(torus.midEdges[:, 0])+np.cos(2.0*torus.midEdges[:, 1])
+    coexactCochain, nextCochain = dr.project_coexact(d1, h1, h2, oneForm, 1)
+    np.testing.assert_allclose(d1@coexactCochain, d1@oneForm, atol=1e-10)
+    #coexact: orthogonal to all exact 1-forms, and the codifferential of nextCochain
+    np.testing.assert_allclose(d0.T@h1@coexactCochain, 0.0, atol=1e-10)
+    np.testing.assert_allclose(h1@coexactCochain, -d1.T@h2@nextCochain, atol=1e-10)
+    np.testing.assert_allclose(coexactCochain, dr.hodge_decomposition(d0, d1, h1, h2, oneForm, 1)[1], atol=1e-8)
+    with pytest.raises(ValueError):
+        dr.project_coexact(d1, h2, h2, oneForm, 1)
+    with pytest.raises(ValueError):
+        dr.project_coexact(d1, h1, h1, oneForm, 1)

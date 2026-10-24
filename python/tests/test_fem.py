@@ -107,3 +107,24 @@ def test_fem_matrices_reject_bad_input(mesh):
         dr.curl_matrix_2D(mesh, N=2, matching=np.zeros(3, dtype=int))
     with pytest.raises(ValueError):
         dr.face_mass_matrix_2D(mesh, dim=0)
+
+
+def test_vertex_mass_matrices_integrate_piecewise_linear_functions(mesh):
+    M = dr.conf_mass_matrix_2D(mesh)
+    lumped = dr.lumped_voronoi_mass_matrix_2D(mesh)
+    assert M.shape==lumped.shape==(len(mesh.V), len(mesh.V))
+    assert abs(M-M.T).max()==0.0
+    #lumping sums the rows, into a third of the area of the adjacent faces
+    np.testing.assert_allclose(np.asarray(M.sum(axis=1)).ravel(), lumped.diagonal(), atol=1e-15)
+    np.testing.assert_allclose(lumped.diagonal(), np.bincount(mesh.F.ravel(), np.repeat(mesh.faceAreas/3.0, 3), minlength=len(mesh.V)))
+    #the square of a linear function is quadratic, so the edge-midpoint rule integrates it exactly
+    f = mesh.V@A
+    midValues = (f[mesh.F]+f[mesh.F[:, [1, 2, 0]]])/2.0
+    assert f@M@f==pytest.approx(np.sum(mesh.faceAreas*np.sum(midValues**2, axis=1)/3.0), rel=1e-12)
+
+
+def test_vertex_mass_matrices_of_vector_quantities(mesh):
+    for massMatrix in (dr.conf_mass_matrix_2D, dr.lumped_voronoi_mass_matrix_2D):
+        assert abs(massMatrix(mesh, dim=3)-scipy.sparse.kron(massMatrix(mesh), scipy.sparse.identity(3))).max()==0.0
+        with pytest.raises(ValueError):
+            massMatrix(mesh, dim=0)

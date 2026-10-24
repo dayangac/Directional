@@ -167,3 +167,26 @@ def test_gaussian_curvature_satisfies_gauss_bonnet(mesh):
 def test_bounding_box(mesh):
     np.testing.assert_array_equal(mesh.minBox.ravel(), mesh.V.min(axis=0))
     np.testing.assert_array_equal(mesh.maxBox.ravel(), mesh.V.max(axis=0))
+
+
+def test_dual_cycles_are_the_face_bundle_cycles(mesh):
+    basisCycles, cycleCurvature, vertex2cycle, innerEdges = dr.dual_cycles(mesh)
+    ftb = dr.PCFaceTangentBundle(mesh)
+    assert abs(basisCycles-ftb.cycles).max()==0.0
+    np.testing.assert_array_equal(cycleCurvature, ftb.cycleCurvatures)
+    np.testing.assert_array_equal(vertex2cycle, ftb.local2Cycle)
+    np.testing.assert_array_equal(innerEdges, mesh.innerEdges)
+    #inner vertices, then the boundary loops, then 2g generators
+    assert basisCycles.shape==(np.count_nonzero(mesh.isBoundaryVertex==0)+len(mesh.boundaryLoops)+2*max(mesh.numGenerators, 0), len(innerEdges))
+
+
+def test_barycentric_subdivision(mesh):
+    VFine, FFine = dr.barycentric_subdivision(mesh.V, mesh.F)
+    np.testing.assert_array_equal(VFine[:len(mesh.V)], mesh.V)
+    np.testing.assert_allclose(VFine[len(mesh.V):], mesh.barycenters, atol=1e-15)
+    assert FFine.shape==(3*len(mesh.F), 3)
+    #each face splits into three with the same orientation and a third of the area
+    fineMesh = dr.TriMesh(VFine, FFine)
+    np.testing.assert_allclose(fineMesh.faceAreas, np.repeat(mesh.faceAreas/3.0, 3), rtol=1e-10)
+    np.testing.assert_allclose(fineMesh.faceNormals, np.repeat(mesh.faceNormals, 3, axis=0), atol=1e-10)
+    assert fineMesh.eulerChar==mesh.eulerChar
