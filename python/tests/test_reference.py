@@ -127,6 +127,9 @@ def test_combing_and_curl_matching_match_cpp(cpp_reference):
             assert_matches(getattr(field, array), cpp(name + "_" + array))
     assert_matches(rawField.effort, cpp("curl_effort"))
     assert_matches(curlNorm, cpp("curl_curlNorm"))
+    tb = rawField.tb
+    assert_matches(dr.effort_to_indices(tb.cycles, rawField.effort[tb.innerAdjacencies], tb.cycleCurvatures, rawField.N), cpp("effort_indices"))
+    assert_matches(dr.rotation_to_raw(tb, np.full(len(mesh.EV), 0.01), 4, 0.3).extField, cpp("rotation_extField"))
 
 
 def test_index_prescription_matches_cpp(cpp_reference):
@@ -181,6 +184,23 @@ def test_raw_to_polyvector_matches_cpp(cpp_reference):
     assert_matches(dr.raw_to_polyvector(rawField).intField, cpp_reference("polyvector")("raw_to_polyvector_intField"))
 
 
+def test_project_curl_and_conjugate_match_cpp(cpp_reference):
+    cpp = cpp_reference("polyvector")
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "lilium.obj"))
+    rawField = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "lilium.rawfield"), dr.PCFaceTangentBundle(mesh))
+    dr.curl_matching(rawField)
+    assert_matches(dr.project_curl(rawField).extField, cpp("project_curl_extField"))
+    torus = dr.readOBJ(str(TUTORIAL_DATA_PATH / "torus.obj"))
+    pvData = dr.PolyVectorData(dr.IntrinsicVertexTangentBundle(torus), 4)
+    pvData.constSpaces = np.array([0])
+    pvData.constVectors = torus.minVertexPrincipalDirections[[0]]+0.3*torus.maxVertexPrincipalDirections[[0]]
+    pvData.wAlignment = np.array([-1.0])
+    pvData.iterationMode = True
+    pvField = dr.polyvector_field(pvData)
+    assert_matches(dr.conjugate(pvField, pvData).intField, cpp("conjugate_intField"))
+    assert_matches(dr.hard_normalization(pvField, pvData).intField, cpp("hard_normalization_intField"))
+
+
 @pytest.mark.parametrize("name", ["fertility", "lilium"])
 def test_topology_matches_cpp(cpp_reference, name):
     cpp = cpp_reference("topology")
@@ -231,6 +251,8 @@ def test_fem_matrices_match_cpp(cpp_reference, name):
     assert_sparse_matches(dr.face_mass_matrix_2D(mesh, False, 2), cpp, name + "_face_mass")
     assert_sparse_matches(dr.face_mass_matrix_2D(mesh, True), cpp, name + "_inverse_face_mass")
     assert_sparse_matches(dr.edge_diamond_mass_matrix_2D(mesh), cpp, name + "_edge_diamond_mass")
+    assert_sparse_matches(dr.conf_mass_matrix_2D(mesh, 3), cpp, name + "_conf_mass")
+    assert_sparse_matches(dr.lumped_voronoi_mass_matrix_2D(mesh), cpp, name + "_lumped_voronoi_mass")
     assert_sparse_matches(dr.face_extrinsic_to_intrinsic_matrix_2D(mesh, 2), cpp, name + "_extrinsic_to_intrinsic")
     assert_sparse_matches(dr.face_intrinsic_to_extrinsic_matrix_2D(mesh), cpp, name + "_intrinsic_to_extrinsic")
 
@@ -265,6 +287,9 @@ def test_cochain_functions_match_cpp(cpp_reference):
     exactCochain, coexactCochain, harmCochain, _, _ = dr.hodge_decomposition(d0, d1, h1, h2, oneForm, 1)
     for name, value in (("exactCochain", exactCochain), ("coexactCochain", coexactCochain), ("harmCochain", harmCochain)):
         assert_matches(value, cpp("hodge_" + name))
+    coexactCochain, nextCochain = dr.project_coexact(d1, h1, h2, oneForm, 1)
+    assert_matches(coexactCochain, cpp("coexact_coexactCochain"))
+    assert_matches(nextCochain, cpp("coexact_nextCochain"))
     harmBasis = dr.cohomology_basis(d0, d1, h1, 2)
     np.testing.assert_allclose(harmBasis@(harmBasis.T@h1@oneForm), cpp("harmonic_projection").ravel(), atol=1e-6)
 
@@ -288,6 +313,8 @@ def test_integration_matches_cpp(cpp_reference):
         isoV, isoE, _, _, funcNum = dr.branched_isolines(meshCut.V, meshCut.F, NFunction)
         for array, value in (("isoV", isoV), ("isoE", isoE), ("funcNum", funcNum)):
             assert_matches(value, cpp(name + "_" + array))
+        assert_sparse_matches(dr.branched_gradient(meshCut, rawField.N), cpp, name + "_branched_gradient")
+        assert_matches(dr.isolines(meshCut.V, meshCut.F, NFunction[:, 0])[0], cpp(name + "_isolinesV"))
 
 
 @pytest.mark.skipif(not hasattr(dr, "mesher"), reason="the module was built without GMP, so without meshing")

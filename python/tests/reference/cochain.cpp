@@ -37,6 +37,10 @@ int main(int argc, char** argv)
     write(outDir, "hodge_coexactCochain", coexactCochain);
     write(outDir, "hodge_harmCochain", harmCochain);
 
+    directional::project_coexact<double>(d1, h1, h2, oneForm, 1, coexactCochain, nextCochain);
+    write(outDir, "coexact_coexactCochain", coexactCochain);
+    write(outDir, "coexact_nextCochain", nextCochain);
+
     //the basis is only defined up to a rotation, so the projection onto it is compared
     Eigen::MatrixXd harmBasis;
     directional::cohomology_basis<double>(d0, d1, h1, 2, harmBasis);

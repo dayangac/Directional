@@ -12,6 +12,8 @@
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
 #include <directional/branched_isolines.h>
+#include <directional/branched_gradient.h>
+#include <directional/isolines.h>
 #include "write.h"
 
 int main(int argc, char** argv)
@@ -51,5 +53,12 @@ int main(int argc, char** argv)
         write(outDir, name + "_isoV", isoV);
         write(outDir, name + "_isoE", isoE);
         write(outDir, name + "_funcNum", funcNum);
+
+        Eigen::SparseMatrix<double> G;
+        directional::branched_gradient(meshCut, N, G);
+        write_sparse(outDir, name + "_branched_gradient", G);
+        Eigen::VectorXd firstFunction = NFunction.col(0);
+        directional::isolines(meshCut.V, meshCut.F, firstFunction, 0, isoV, isoE, isoOrigE, isoN);
+        write(outDir, name + "_isolinesV", isoV);
     }
 }

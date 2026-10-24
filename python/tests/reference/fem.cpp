@@ -30,6 +30,8 @@ int main(int argc, char** argv)
         write_sparse(outDir, name + "_face_mass", directional::face_mass_matrix_2D<double>(mesh, false, 2));
         write_sparse(outDir, name + "_inverse_face_mass", directional::face_mass_matrix_2D<double>(mesh, true));
         write_sparse(outDir, name + "_edge_diamond_mass", directional::edge_diamond_mass_matrix_2D<double>(mesh));
+        write_sparse(outDir, name + "_conf_mass", directional::conf_mass_matrix_2D<double>(mesh, 3));
+        write_sparse(outDir, name + "_lumped_voronoi_mass", directional::lumped_voronoi_mass_matrix_2D<double>(mesh));
         write_sparse(outDir, name + "_extrinsic_to_intrinsic", directional::face_extrinsic_to_intrinsic_matrix_2D<double>(mesh, 2));
         write_sparse(outDir, name + "_intrinsic_to_extrinsic", directional::face_intrinsic_to_extrinsic_matrix_2D<double>(mesh));
     }

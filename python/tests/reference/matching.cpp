@@ -11,6 +11,8 @@
 #include <directional/principal_matching.h>
 #include <directional/combing.h>
 #include <directional/curl_matching.h>
+#include <directional/effort_to_indices.h>
+#include <directional/rotation_to_raw.h>
 #include "write.h"
 
 void write_matching(const std::string& outDir, const std::string& name, const directional::CartesianField& field)
@@ -40,4 +42,15 @@ int main(int argc, char** argv)
     write_matching(outDir, "curl", rawField);
     write(outDir, "curl_effort", rawField.effort);
     write(outDir, "curl_curlNorm", curlNorm);
+
+    Eigen::VectorXd effortInner(ftb.innerAdjacencies.size());
+    for (int i=0;i<effortInner.size();i++)
+        effortInner(i) = rawField.effort(ftb.innerAdjacencies(i));
+    Eigen::VectorXi indices;
+    directional::effort_to_indices(ftb.cycles, effortInner, ftb.cycleCurvatures, N, indices);
+    write(outDir, "effort_indices", indices);
+
+    directional::CartesianField parallelField;
+    directional::rotation_to_raw(ftb, Eigen::VectorXd::Constant(mesh.EV.rows(), 0.01), 4, 0.3, parallelField);
+    write(outDir, "rotation_extField", parallelField.extField);
 }

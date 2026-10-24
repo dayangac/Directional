@@ -12,6 +12,9 @@
 #include <directional/polyvector_iteration_functions.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/raw_to_polyvector.h>
+#include <directional/IntrinsicVertexTangentBundle.h>
+#include <directional/curl_matching.h>
+#include <directional/project_curl.h>
 #include "write.h"
 
 //Two edge directions on face 0, and one on faces 300 and 900
@@ -85,4 +88,27 @@ int main(int argc, char** argv)
     directional::read_raw_field(dataDir + "/lilium.rawfield", liliumFtb, N, rawField);
     directional::raw_to_polyvector(rawField, pvField);
     write(outDir, "raw_to_polyvector_intField", pvField.intField);
+
+    Eigen::VectorXd curlNorm;
+    directional::CartesianField curlFreeField;
+    directional::curl_matching(rawField, curlNorm);
+    directional::project_curl(rawField, Eigen::VectorXi(), Eigen::MatrixXd(0, 3), curlFreeField);
+    write(outDir, "project_curl_extField", curlFreeField.extField);
+
+    //a conjugate field and a normalized field on the torus
+    directional::TriMesh torus;
+    directional::IntrinsicVertexTangentBundle vtb;
+    directional::readOBJ(dataDir + "/torus.obj", torus);
+    vtb.init(torus);
+    directional::PolyVectorData conjugateData;
+    conjugateData.tb = &vtb;
+    conjugateData.N = 4;
+    conjugateData.constSpaces = Eigen::VectorXi::Zero(1);
+    conjugateData.constVectors = torus.minVertexPrincipalDirections.row(0)+0.3*torus.maxVertexPrincipalDirections.row(0);
+    conjugateData.wAlignment = Eigen::VectorXd::Constant(1, -1.0);
+    conjugateData.iterationMode = true;
+    directional::CartesianField torusPvField;
+    directional::polyvector_field(conjugateData, torusPvField);
+    write(outDir, "conjugate_intField", directional::conjugate(torusPvField, conjugateData).intField);
+    write(outDir, "hard_normalization_intField", directional::hard_normalization(torusPvField, conjugateData).intField);
 }
