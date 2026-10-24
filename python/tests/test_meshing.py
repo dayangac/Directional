@@ -92,3 +92,11 @@ def test_meshing_rejects_bad_input(vase):
     otherMesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "spherers.obj"))
     with pytest.raises(ValueError):
         dr.mesher(otherMesh, dr.setup_mesher(meshCut, intData))
+
+
+def test_orig2cut_matrix_gives_the_reduced_function(vase):
+    intData, meshCut = integrated(vase, 4)
+    NFunction = (intData.vertexTrans2CutMat@intData.linRedMat@intData.singIntSpanMat@intData.intSpanMat@intData.nVertexFunction).reshape(-1, 4)
+    mData = dr.setup_mesher(meshCut, intData)
+    #the sign symmetry is reduced to the first N/2 functions
+    np.testing.assert_allclose(mData.orig2CutMat@mData.vertexNFunction, NFunction[:, :2].ravel(), atol=1e-12)

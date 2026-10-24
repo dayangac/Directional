@@ -6,6 +6,7 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/tuple.h>
 #include <directional/CartesianField.h>
@@ -13,6 +14,9 @@
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
 #include <directional/branched_isolines.h>
+#include <directional/branched_gradient.h>
+#include <directional/cut_mesh_with_singularities.h>
+#include <directional/isolines.h>
 #include "utils.h"
 
 namespace nb = nanobind;
@@ -47,6 +51,20 @@ void bind_integration(nb::module_& m)
     .def_prop_ro("integerVars", view(&IntegrationData::integerVars), nb::rv_policy::reference_internal)
     .def_prop_ro("singularIndices", view(&IntegrationData::singularIndices), nb::rv_policy::reference_internal)
     .def_prop_ro("nVertexFunction", view(&IntegrationData::nVertexFunction), nb::rv_policy::reference_internal)
+    //the translation that setup_integration() fixes (the first singularity, or vertex 0), which can be changed before integrate()
+    .def_prop_rw("fixedIndices", view(&IntegrationData::fixedIndices), [](IntegrationData& intData, const Eigen::VectorXi& fixedIndices){
+        require(fixedIndices.size()==intData.fixedValues.size(), "fixedIndices must have the length of fixedValues");
+        intData.fixedIndices = fixedIndices;
+    }, nb::rv_policy::reference_internal)
+    .def_prop_rw("fixedValues", view(&IntegrationData::fixedValues), [](IntegrationData& intData, const Eigen::VectorXd& fixedValues){
+        require(fixedValues.size()==intData.fixedIndices.size(), "fixedValues must have the length of fixedIndices");
+        intData.fixedValues = fixedValues;
+    }, nb::rv_policy::reference_internal)
+    .def_prop_ro("vertexTrans2CutMat", [](const IntegrationData& intData){ return intData.vertexTrans2CutMat; })
+    .def_prop_ro("constraintMat", [](const IntegrationData& intData){ return intData.constraintMat; })
+    .def_prop_ro("linRedMat", [](const IntegrationData& intData){ return intData.linRedMat; })
+    .def_prop_ro("intSpanMat", [](const IntegrationData& intData){ return intData.intSpanMat; })
+    .def_prop_ro("singIntSpanMat", [](const IntegrationData& intData){ return intData.singIntSpanMat; })
     .def_rw("lengthRatio", &IntegrationData::lengthRatio)
     .def_rw("integralSeamless", &IntegrationData::integralSeamless)
     .def_rw("roundSeams", &IntegrationData::roundSeams)
@@ -94,6 +112,33 @@ void bind_integration(nb::module_& m)
             throw std::runtime_error("integration failed");
         return std::make_pair(NFunction, NCornerFunctions);
     }, "field"_a, "intData"_a, "meshCut"_a);
+
+    m.def("cut_mesh_with_singularities", [](const TriMesh& mesh, const Eigen::VectorXi& singularities){
+        require(singularities.size()==0 || (singularities.minCoeff()>=0 && singularities.maxCoeff()<mesh.V.rows()), "singularities contains out-of-range vertices");
+        Eigen::MatrixXi face2cut;
+        directional::cut_mesh_with_singularities(mesh, singularities, face2cut);
+        return face2cut;
+    }, "mesh"_a, "singularities"_a);
+
+    //The gradient of N functions on the vertices (packets of N per vertex), as packets of N 3D vectors per face.
+    m.def("branched_gradient", [](const TriMesh& mesh, const int N){
+        require(N>0, "N must be positive");
+        Eigen::SparseMatrix<double> G;
+        directional::branched_gradient(mesh, N, G);
+        return G;
+    }, "mesh"_a, "N"_a);
+
+    //Returns (isoV, isoE, isoOrigE, isoN) at the integer values of z. The C++ number of isolines is left out, since
+    //the integer values are always used.
+    m.def("isolines", [](const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const Eigen::VectorXd& z){
+        require(V.cols()==3 && F.cols()==3, "V and F must be #V by 3 and #F by 3");
+        require(z.size()==V.rows(), "z must have a value per vertex");
+        require(F.size()==0 || (F.minCoeff()>=0 && F.maxCoeff()<V.rows()), "F contains out-of-range vertex indices");
+        Eigen::MatrixXd isoV, isoN;
+        Eigen::MatrixXi isoE, isoOrigE;
+        directional::isolines(V, F, z, 0, isoV, isoE, isoOrigE, isoN);
+        return std::make_tuple(isoV, isoE, isoOrigE, isoN);
+    }, "V"_a, "F"_a, "z"_a);
 
     //Returns (isoV, isoE, isoOrigE, isoN, funcNum).
     m.def("branched_isolines", [](const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const Eigen::MatrixXd& NFunction){

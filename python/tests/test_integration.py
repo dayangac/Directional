@@ -247,3 +247,62 @@ def test_branched_isolines_are_at_integer_values(whole):
     np.testing.assert_array_equal(np.unique(funcNum), [0, 1, 2])
     with pytest.raises(ValueError):
         dr.branched_isolines(mesh.V, mesh.F, np.zeros((3, 2)))
+
+
+def test_integration_matrices_rebuild_the_functions(setup, integrated):
+    intData, _, combedField = setup
+    NFunction, _, nVertexFunction = integrated
+    vertex2Cut = intData.vertexTrans2CutMat@intData.linRedMat@intData.singIntSpanMat@intData.intSpanMat
+    np.testing.assert_allclose((vertex2Cut@nVertexFunction).reshape(-1, combedField.N), NFunction, atol=1e-12)
+    #the seamless constraints hold at the solution
+    constraints = intData.constraintMat@intData.linRedMat@intData.singIntSpanMat@intData.intSpanMat
+    np.testing.assert_allclose(constraints@nVertexFunction, 0.0, atol=1e-10)
+
+
+def test_fixed_values_translate_the_functions(whole):
+    _, rawField = whole
+    NFunctions = []
+    for shift in (0.0, 0.25):
+        intData = dr.IntegrationData(rawField.N)
+        meshCut, combedField = dr.setup_integration(rawField, intData)
+        intData.fixedValues = intData.fixedValues+shift
+        NFunctions.append(dr.integrate(combedField, intData, meshCut)[0])
+    np.testing.assert_allclose(NFunctions[1]-NFunctions[0], np.tile([0.25, 0.25, -0.25, -0.25], (len(NFunctions[0]), 1)), atol=1e-10)
+    with pytest.raises(ValueError):
+        intData.fixedValues = np.zeros(3)
+
+
+def test_cut_mesh_with_singularities_is_the_integration_cut(whole, setup):
+    mesh, rawField = whole
+    intData, _, _ = setup
+    face2cut = dr.cut_mesh_with_singularities(mesh, rawField.singLocalCycles)
+    np.testing.assert_array_equal(face2cut, intData.face2cut)
+    if not mesh.boundaryLoops:
+        #a cut graph that opens a closed surface of genus g into a disc has E-V = 2g-1
+        seams = np.unique(mesh.FE[face2cut!=0])
+        assert len(seams)-len(np.unique(mesh.EV[seams]))==2*mesh.numGenerators-1
+    with pytest.raises(ValueError):
+        dr.cut_mesh_with_singularities(mesh, np.array([len(mesh.V)]))
+
+
+def test_branched_gradient_of_linear_functions(setup):
+    _, meshCut, _ = setup
+    A = np.array([0.3, -1.2, 0.7])
+    G = dr.branched_gradient(meshCut, 2)
+    assert G.shape==(6*len(meshCut.F), 2*len(meshCut.V))
+    gradients = (G@np.column_stack([meshCut.V@A, -meshCut.V@A]).ravel()).reshape(-1, 2, 3)
+    tangentialA = A-np.outer(meshCut.faceNormals@A, np.ones(3))*meshCut.faceNormals
+    np.testing.assert_allclose(gradients[:, 0], tangentialA, atol=1e-12)
+    np.testing.assert_allclose(gradients[:, 1], -tangentialA, atol=1e-12)
+
+
+def test_isolines_are_the_first_branch(whole):
+    mesh, _ = whole
+    f = 20.0*mesh.V@np.array([0.3, -0.5, 0.8])
+    isoV, isoE, isoOrigE, isoN = dr.isolines(mesh.V, mesh.F, f)
+    np.testing.assert_allclose(20.0*isoV@np.array([0.3, -0.5, 0.8]), np.round(20.0*isoV@np.array([0.3, -0.5, 0.8])), atol=1e-8)
+    branchedV, branchedE, _, _, _ = dr.branched_isolines(mesh.V, mesh.F, np.column_stack([f, -f]))
+    np.testing.assert_array_equal(isoV, branchedV)
+    np.testing.assert_array_equal(isoE, branchedE)
+    with pytest.raises(ValueError):
+        dr.isolines(mesh.V, mesh.F, f[:-1])

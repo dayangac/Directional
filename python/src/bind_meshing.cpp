@@ -6,6 +6,7 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <nanobind/stl/tuple.h>
 #include <directional/setup_mesher.h>
 #include <directional/mesher.h>
@@ -29,6 +30,7 @@ void bind_meshing(nb::module_& m)
     .def_prop_ro("cutF", view(&MesherData::cutF), nb::rv_policy::reference_internal)
     .def_prop_ro("vertexNFunction", view(&MesherData::vertexNFunction), nb::rv_policy::reference_internal)
     .def_prop_ro("integerVars", view(&MesherData::integerVars), nb::rv_policy::reference_internal)
+    .def_prop_ro("orig2CutMat", [](const MesherData& mData){ return mData.orig2CutMat; })
     .def_rw("exactResolution", &MesherData::exactResolution)
     .def_rw("verbose", &MesherData::verbose);
 
