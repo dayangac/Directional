@@ -33,6 +33,11 @@ inline void require_face_raw_field(const CartesianField& field)
     require(field.tb->discTangType()==directional::discTangTypeEnum::FACE_SPACES, "field must be face-based");
 }
 
+/***
+ Binds matching, combing, index prescription and curl projection. combing() and project_curl() return new fields that
+ point to the same tangent bundle (keep_alive). curl_matching(), index_prescription() and effort_to_indices(field)
+ change the given field in place, as in C++, and return their other outputs.
+ ***/
 void bind_matching(nb::module_& m)
 {
     m.def("combing", [](const CartesianField& rawField, const std::optional<Eigen::MatrixXi>& spaceIsCut){

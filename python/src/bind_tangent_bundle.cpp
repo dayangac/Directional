@@ -18,6 +18,7 @@ namespace nb = nanobind;
 using namespace nb::literals;
 using directional::TangentBundle;
 
+//Checks the tangent spaces and the number of columns given to project_to_intrinsic() and project_to_extrinsic().
 inline void require_spaces(const TangentBundle& tb, const Eigen::VectorXi& tangentSpaces, const int numDirectionals, const int dim)
 {
     require(tangentSpaces.size()==0 || (tangentSpaces.minCoeff()>=0 && tangentSpaces.maxCoeff()<tb.numSpaces), "tangentSpaces contains out-of-range indices");
@@ -48,6 +49,10 @@ void bind_bundle(nb::module_& m, const char* name)
     }, "faces"_a, "baryCoords"_a, "intDirectionals"_a);
 }
 
+/***
+ Binds the TangentBundle interface, and the face-based and vertex-based bundles that implement it.
+ The bundle arrays are read-only NumPy views, and the sparse matrices (cycles, masses) are scipy.sparse copies.
+ ***/
 void bind_tangent_bundle(nb::module_& m)
 {
     nb::enum_<directional::discTangTypeEnum>(m, "discTangTypeEnum")

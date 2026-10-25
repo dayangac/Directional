@@ -25,6 +25,7 @@ using directional::CartesianField;
 using directional::IntegrationData;
 using directional::TriMesh;
 
+//The integration only works on face-based fields of the same degree as intData.
 inline void require_face_field(const CartesianField& field, const IntegrationData& intData)
 {
     require(field.tb->discTangType()==directional::discTangTypeEnum::FACE_SPACES, "field must be face-based");

@@ -44,6 +44,11 @@ Eigen::VectorXi per_element(const int size, const Accessor& accessor)
     return values;
 }
 
+/***
+ Binds TriMesh, the mesh readers and writers, and the mesh utilities (dual_cycles, barycentric_subdivision).
+ The mesh arrays are read-only NumPy views, and the half-edge accessors are exposed as arrays over all elements.
+ Functions with several outputs return them as a tuple, in the order of the C++ arguments.
+ ***/
 void bind_mesh(nb::module_& m)
 {
     nb::class_<TriMesh>(m, "TriMesh")

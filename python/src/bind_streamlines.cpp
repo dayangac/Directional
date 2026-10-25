@@ -27,6 +27,7 @@ inline Eigen::MatrixXd stack_rows(const std::vector<Eigen::RowVector3d>& rows)
     return stacked;
 }
 
+//Copies a list of values (as stored for the traced segments) into a vector.
 template <typename T>
 Eigen::Matrix<T, Eigen::Dynamic, 1> to_vector(const std::vector<T>& list)
 {
@@ -64,8 +65,8 @@ void bind_streamlines(nb::module_& m)
                                  StreamlineState& state){
         require(field.fieldType==fieldTypeEnum::RAW_FIELD, "field must be a RAW_FIELD");
         //the library casts vertex bundles to IntrinsicVertexTangentBundle, so other bundles are rejected
-        const auto* ftb = dynamic_cast<const directional::PCFaceTangentBundle*>(field.tb);
-        const auto* vtb = dynamic_cast<const directional::IntrinsicVertexTangentBundle*>(field.tb);
+        const directional::PCFaceTangentBundle* ftb = dynamic_cast<const directional::PCFaceTangentBundle*>(field.tb);
+        const directional::IntrinsicVertexTangentBundle* vtb = dynamic_cast<const directional::IntrinsicVertexTangentBundle*>(field.tb);
         require(ftb!=nullptr || vtb!=nullptr, "field must be on a PCFaceTangentBundle or an IntrinsicVertexTangentBundle");
         const directional::TriMesh* mesh = (ftb!=nullptr ? ftb->mesh : vtb->mesh);
         require(seedLocations.size()==0 || (seedLocations.minCoeff()>=0 && seedLocations.maxCoeff()<mesh->F.rows()),
