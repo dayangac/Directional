@@ -25,12 +25,22 @@ The header files contain documentation of the parameters to each function and th
 
 This tutorial comprises an exhaustive set of examples that demonstrate the capabilities of Directional, where every subchapter entails a single concept. The tutorial code can be installed by going into the `tutorial` folder from the main Directional folder, and typing the following instructions in a terminal:
 
-```cpp
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release ../
-make
-```
+=== "C++"
+
+    ```cpp
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release ../
+    make
+    ```
+
+=== "Python"
+
+    ```bash
+    pip install ./python
+    pip install polyscope
+    python python/examples/202_sampling.py
+    ```
 
 This will build all tutorial chapters in the `bin` folder. The necessary dependencies will be appended and built automatically. To build in Windows, use the `cmake-gui ..` options instead of the last two commands, and create the project using Visual Studio, with the proper tutorial subchapter as the "startup project".
 
@@ -97,17 +107,33 @@ Directional uses a specialized class called `directional::DirectionalViewer` whi
 
 The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In this example, a mesh and a field are read from a file and visualized as follows:
 
-```cpp
-directional::readOFF(TUTORIAL_DATA_PATH "/bumpy.off",mesh);
-ftb.init(mesh);
-directional::read_raw_field(TUTORIAL_DATA_PATH "/bumpy.rawfield", ftb, N, field);
-directional::read_singularities(TUTORIAL_DATA_PATH "/bumpy.sings", field);
+=== "C++"
 
-viewer.init();
-viewer.set_surface_mesh(mesh);
-viewer.set_cartesian_field(field);
-viewer.launch();
-```
+    ```cpp
+    directional::readOFF(TUTORIAL_DATA_PATH "/bumpy.off",mesh);
+    ftb.init(mesh);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/bumpy.rawfield", ftb, N, field);
+    directional::read_singularities(TUTORIAL_DATA_PATH "/bumpy.sings", field);
+
+    viewer.init();
+    viewer.set_surface_mesh(mesh);
+    viewer.set_cartesian_field(field);
+    viewer.launch();
+    ```
+
+=== "Python"
+
+    ```python
+    mesh = dr.readOFF(str(TUTORIAL_DATA_PATH / "bumpy.off"))
+    ftb = dr.PCFaceTangentBundle(mesh)
+    field = dr.read_raw_field(str(TUTORIAL_DATA_PATH / "bumpy.rawfield"), ftb)
+    dr.read_singularities(str(TUTORIAL_DATA_PATH / "bumpy.sings"), field)
+
+    ps.init()
+    viewer.set_surface_mesh(mesh)
+    viewer.set_cartesian_field(field)
+    ps.show()
+    ```
 
 The field is read in *raw* format (see [File Formats](file_formats.md)), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*,
 
@@ -121,47 +147,75 @@ The singularities and glyphs (and most other properties) can be toggled directly
 
 This example shows a Cartesian field computed (with the power-field method described in [Example 301](#301-power-fields)) on either a vertex-based tangent bundle or a face-based tangent bundle. This highlights the flexibility of choosing a discretization. The relevant code segments are:
 
-```cpp
-directional::IntrinsicVertexTangentBundle vtb;
-directional::PCFaceTangentBundle ftb;
+=== "C++"
 
-...
+    ```cpp
+    directional::IntrinsicVertexTangentBundle vtb;
+    directional::PCFaceTangentBundle ftb;
 
-void callbackFunc()
-{
-    ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
+    ...
 
-    if (viewingMode==FACE_FIELD)
-        if (ImGui::Button("Toggle Vertex Field"))
-            viewingMode=VERTEX_FIELD;
+    void callbackFunc()
+    {
+        ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
 
-    if (viewingMode==VERTEX_FIELD)
-        if (ImGui::Button("Toggle Face Field"))
-            viewingMode=FACE_FIELD;
+        if (viewingMode==FACE_FIELD)
+            if (ImGui::Button("Toggle Vertex Field"))
+                viewingMode=VERTEX_FIELD;
 
-    viewer.toggle_singularities(viewingMode==FACE_FIELD, 0);
-    viewer.toggle_singularities(viewingMode==VERTEX_FIELD, 1);
-    viewer.toggle_cartesian_field(viewingMode==FACE_FIELD,0);
-    viewer.toggle_cartesian_field(viewingMode==VERTEX_FIELD,1);
+        if (viewingMode==VERTEX_FIELD)
+            if (ImGui::Button("Toggle Face Field"))
+                viewingMode=FACE_FIELD;
 
-    ImGui::PopItemWidth();
-}
+        viewer.toggle_singularities(viewingMode==FACE_FIELD, 0);
+        viewer.toggle_singularities(viewingMode==VERTEX_FIELD, 1);
+        viewer.toggle_cartesian_field(viewingMode==FACE_FIELD,0);
+        viewer.toggle_cartesian_field(viewingMode==VERTEX_FIELD,1);
 
-...
+        ImGui::PopItemWidth();
+    }
 
-directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
-viewer.init();
-viewer.set_callback(&callbackFunc);
-ftb.init(mesh);
-vtb.init(mesh);
+    ...
 
-...
+    directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
+    viewer.init();
+    viewer.set_callback(&callbackFunc);
+    ftb.init(mesh);
+    vtb.init(mesh);
 
-viewer.set_surface_mesh(mesh);
-viewer.set_cartesian_field(rawFaceField, "Face-Based Field",  0);
-viewer.set_cartesian_field(rawVertexField, "Vertex-Based Field", 1);
-viewer.launch();
-```
+    ...
+
+    viewer.set_surface_mesh(mesh);
+    viewer.set_cartesian_field(rawFaceField, "Face-Based Field",  0);
+    viewer.set_cartesian_field(rawVertexField, "Vertex-Based Field", 1);
+    viewer.launch();
+    ```
+
+=== "Python"
+
+    ```python
+    mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "elephant.obj"))
+    ftb = dr.PCFaceTangentBundle(mesh)
+    vtb = dr.IntrinsicVertexTangentBundle(mesh)
+
+
+    def callbackFunc():
+        global viewFaceField
+        if psim.Button("Toggle Vertex Field" if viewFaceField else "Toggle Face Field"):
+            viewFaceField = not viewFaceField
+        for name, enabled in (("Face-Based Field", viewFaceField), ("Vertex-Based Field", not viewFaceField)):
+            ps.get_point_cloud(name).set_enabled(enabled)
+            ps.get_point_cloud(name + " singularities").set_enabled(enabled)
+
+    ...
+
+    ps.init()
+    viewer.set_surface_mesh(mesh)
+    viewer.set_cartesian_field(rawFaceField, "Face-Based Field")
+    viewer.set_cartesian_field(rawVertexField, "Vertex-Based Field")
+    ps.set_user_callback(callbackFunc)
+    ps.show()
+    ```
 
 One can see the stages of computing a field: first reading a mesh (`readOBJ()`), then initializing the approxiate tangent bundle with the mesh (`ftb/vtb.init()`), and after computing the fields and converting it to raw format, setting the two fields (with appropriate names and ordinal numbers) to the scene. Note that a visual Cartesian field is a separate entity from a surface mesh; the visual quantities needed for Cartesian field are taken from its inner tangent bundle class (you can infact show the field "floating" without the underlying mesh. `viewer.toggle_X()` functions are used to control what's shown.
 
@@ -177,11 +231,22 @@ Vector fields on surfaces are commonly visualized by tracing [streamlines] (http
 
 It is possible to set and visualize scalar quantities on meshes at different discretization locations: either face based quantities that appear as flat colors per face, vertex-based (pointwise) quantities that interpolate linearly on faces, appearing smooth, and edge-based (integrated) quantities, that appear as flat quantities on a diamond mesh associates with each edge (taking a $\frac{1}{3}$ of the area of each adjacent triangle). The is controlled by the ```DirectionalViewer::set_X_data()``` functions, which also allow the setting of the viewable range of the function (the rest is clipped). The code generating the image below is:
 
-```cpp
-    viewer.set_surface_face_data(faceData, "x of normal");
-    viewer.set_surface_vertex_data(vertexData, "sin(y)");
-    viewer.set_surface_edge_data(edgeData, "principal effort");
-```
+=== "C++"
+
+    ```cpp
+        viewer.set_surface_face_data(faceData, "x of normal");
+        viewer.set_surface_vertex_data(vertexData, "sin(y)");
+        viewer.set_surface_edge_data(edgeData, "principal effort");
+    ```
+
+=== "Python"
+
+    ```python
+    psMesh = viewer.set_surface_mesh(mesh)
+    psMesh.add_scalar_quantity("x of normal", faceData, defined_on="faces", enabled=True)
+    psMesh.add_scalar_quantity("sin(y)", vertexData, defined_on="vertices", enabled=True)
+    psMesh.add_scalar_quantity("principal effort", edgeData, defined_on="edges", enabled=True)
+    ```
 
 ![Example 104](images/104_FaceVertexEdgeData.png)<p align=center><em>Edge-, Vertex- and face-based data on a mesh, with the field that induced the matching (Chapter 2).</em></p>
 
@@ -256,13 +321,24 @@ $$y_I=\text{argmin} \left[\sum_{e=(f,g)\in E_{TB}}{\omega_e\left|Y_fr_{fg}^N  - 
 
 where $\omega_c, \forall c\in C$ are user-controlled. The control of soft vs. hard constraints is expressed in this part of the code: 
 
-```cpp
-void recompute_field()
-{
-    directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N,powerFieldHard, normalizeField);
-    directional::power_field(vtb, constVertices, constVectors, alignWeights, N,powerFieldSoft, normalizeField);
-}
-```
+=== "C++"
+
+    ```cpp
+    void recompute_field()
+    {
+        directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N,powerFieldHard, normalizeField);
+        directional::power_field(vtb, constVertices, constVectors, alignWeights, N,powerFieldSoft, normalizeField);
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def recompute_field():
+        global powerFieldHard, powerFieldSoft
+        powerFieldHard = dr.power_field(vtb, constVertices, constVectors, np.full(constVertices.size, -1.0), N, normalizeField)
+        powerFieldSoft = dr.power_field(vtb, constVertices, constVectors, alignWeights, N, normalizeField)
+    ```
 
 The `alignWeights` parameter can either express a soft constraint $\omega_c$, or, where it is smaller than zero, it encodes a hard constraint that will be interpolated (it's possible to then mix both hard and soft constraints).
 
@@ -286,24 +362,43 @@ So that the set $B$ is perfectly interpolated. The matrices $U_{c}$ and vectors 
 
 The algorithm is controled by the data structure `PolyVectorData`, with the important following fields:
 
-```cpp
-struct PolyVectorData{
-public:
+=== "C++"
 
-    //User parameters
-    Eigen::VectorXi constSpaces;    // List of tangent spaces where there are (partial) constraints. The faces can repeat to constrain more vectors
-    Eigen::MatrixXd constVectors;   // Corresponding to constSpaces.
+    ```cpp
+    struct PolyVectorData{
+    public:
+
+        //User parameters
+        Eigen::VectorXi constSpaces;    // List of tangent spaces where there are (partial) constraints. The faces can repeat to constrain more vectors
+        Eigen::MatrixXd constVectors;   // Corresponding to constSpaces.
+        ...
+        int N;                          // Degree of field
+        const TangentBundle* tb;        //The tangent bundle on which the field is defined
+        bool verbose;                   //whether to output anything
+        bool signSymmetry;              // Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
+        double wSmooth;                 // Weight of smoothness
+        double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
+        Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
+        ...
+    };
+    ```
+
+=== "Python"
+
+    ```python
+    #User parameters
+    pvData.constSpaces    # List of tangent spaces where there are (partial) constraints. The faces can repeat to constrain more vectors
+    pvData.constVectors   # Corresponding to constSpaces.
     ...
-    int N;                          // Degree of field
-    const TangentBundle* tb;        //The tangent bundle on which the field is defined
-    bool verbose;                   //whether to output anything
-    bool signSymmetry;              // Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
-    double wSmooth;                 // Weight of smoothness
-    double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
-    Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
+    pvData.N              # Degree of field
+    pvData.tb             #The tangent bundle on which the field is defined
+    pvData.verbose        #whether to output anything
+    pvData.signSymmetry   # Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
+    pvData.wSmooth        # Weight of smoothness
+    pvData.wRoSy          # Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
+    pvData.wAlignment     # Weight of alignment per each of the constfaces. "-1" means a fixed vector
     ...
-};
-```
+    ```
 
 `wSmooth` is $\lambda_S$, `wRosy` is $\lambda_R$, and `wAlignment` is $\omega_c$ (and where it is $-1$ this marks a constraint in $B$). `verbose` should be flagged when output is expected (`false` by default), and `signSymmetry` is flagged when the algorithm should enforce that for every vector $u$ in any single PolyVector in a tangent space, the PolyVector also contains $-u$ (only if $N$ is even); it is `true` by default.
 
@@ -319,22 +414,41 @@ $$
 $$
 for some penalty $\epsilon$ that is assumed to be taken $\epsilon\rightarrow 0$. We employ the common MBO algorithm of repeated iterations of smoothing and renormalization. This introduces the *polyvector iteration* mechanism:
 
-```cpp
-//Computing a regular PolyVector field without iterations
-    directional::polyvector_field(pvData, pvFieldOrig);
-    directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
-    directional::principal_matching(rawFieldOrig);
+=== "C++"
 
-    //Iterating for a smoothest perfect-RoSy field
-    pvData.iterationMode = true;
-    int numIterations = 100;
-    std::vector<directional::PvIterationFunction> iterationFunctions;
-    iterationFunctions.push_back(directional::hard_rosy);
-    directional::polyvector_field(pvData, pvFieldGL);
-    directional::polyvector_iterate(pvData, pvFieldGL, iterationFunctions, numIterations);
-    directional::polyvector_to_raw(pvFieldGL, rawFieldGL, N%2==0);
-    directional::principal_matching(rawFieldGL);
-```
+    ```cpp
+    //Computing a regular PolyVector field without iterations
+        directional::polyvector_field(pvData, pvFieldOrig);
+        directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
+        directional::principal_matching(rawFieldOrig);
+
+        //Iterating for a smoothest perfect-RoSy field
+        pvData.iterationMode = true;
+        int numIterations = 100;
+        std::vector<directional::PvIterationFunction> iterationFunctions;
+        iterationFunctions.push_back(directional::hard_rosy);
+        directional::polyvector_field(pvData, pvFieldGL);
+        directional::polyvector_iterate(pvData, pvFieldGL, iterationFunctions, numIterations);
+        directional::polyvector_to_raw(pvFieldGL, rawFieldGL, N%2==0);
+        directional::principal_matching(rawFieldGL);
+    ```
+
+=== "Python"
+
+    ```python
+    #Computing a regular PolyVector field without iterations
+    pvFieldOrig = dr.polyvector_field(pvData)
+    rawFieldOrig = dr.polyvector_to_raw(pvFieldOrig, N%2==0)
+    dr.principal_matching(rawFieldOrig)
+
+    #Iterating for a smoothest perfect-RoSy field
+    pvData.iterationMode = True
+    numIterations = 100
+    pvFieldGL = dr.polyvector_field(pvData)
+    dr.polyvector_iterate(pvData, pvFieldGL, [dr.hard_rosy], numIterations)
+    rawFieldGL = dr.polyvector_to_raw(pvFieldGL, N%2==0)
+    dr.principal_matching(rawFieldGL)
+    ```
 
 The new parts are the function `polyvector_iterate` that runs an iterative algorithm comprising:
 
@@ -355,9 +469,17 @@ of the parameterization functions (which are tangent vector fields on the surfac
 
 In modern methods, this is usually achieved by a smooth-and-reduce-curl approach, which is again doable by the PolyVector Iterations, and using the following projection functions:
 
-```cpp
-iterationFunctions.push_back(directional::soft_rosy);  iterationFunctions.push_back(directional::curl_projection);
-```
+=== "C++"
+
+    ```cpp
+    iterationFunctions.push_back(directional::soft_rosy);  iterationFunctions.push_back(directional::curl_projection);
+    ```
+
+=== "Python"
+
+    ```python
+    dr.polyvector_iterate(pvData, pvFieldCurlFree, [dr.soft_rosy, dr.curl_projection], numIterations)
+    ```
 
 `soft_rosy()` works by only taking the PolyVector part-way towards a perfect RoSy, and `curl_projection()` does principal matching, and then projects out the curl of the field. Following the iterations, the field is by design curl-free numerically, and the `curl_matching()` retrieves it.
 
@@ -413,27 +535,55 @@ Seamless $N$-functions are denoted as such for that obeying the seamless constra
 
 In this example, we demonstrate the computation of such a integration, both permutationally, and fully seamless. The computed function is a $4$-function with sign-symmetry, computing seamless $(U,V,-U,-V)$ functions that we demonstrate as a quad texture. The core functionality is in these lines:
 
-```cpp
-directional::IntegrationData intData(N);
-...
-directional::setup_integration(rawField, intData, meshCut, combedField);
-    intData.integralSeamless=false;
+=== "C++"
+
+    ```cpp
+    directional::IntegrationData intData(N);
     ...
-    directional::integrate(combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
+    directional::setup_integration(rawField, intData, meshCut, combedField);
+        intData.integralSeamless=false;
+        ...
+        directional::integrate(combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
+        ...
+        intData.integralSeamless = true;  
+        directional::integrate(combedField,  intData, meshCut, cutUVFull,cornerWholeUV);
+    ```
+
+=== "Python"
+
+    ```python
+    intData = dr.IntegrationData(rawField.N)
     ...
-    intData.integralSeamless = true;  
-    directional::integrate(combedField,  intData, meshCut, cutUVFull,cornerWholeUV);
-```
+    meshCut, combedField = dr.setup_integration(rawField, intData)
+    intData.integralSeamless = False
+    ...
+    cutUVRot, _ = dr.integrate(combedField, intData, meshCut)
+    ...
+    intData.integralSeamless = True
+    cutUVFull, _ = dr.integrate(combedField, intData, meshCut)
+    ```
 
 The data structure containing all relevant information about the integration is ```IntegrationData```. It contains some parameters that can be tuned to control the integration. Several relevant ones are:
 
-```cpp
-double lengthRatio;     //global scaling of functions
-//Flags
-bool integralSeamless;  //Whether to do full translational seamless.
-bool roundSeams;        //Whether to round seams or round singularities
-bool verbose;           //output the integration log.
-```
+=== "C++"
+
+    ```cpp
+    double lengthRatio;     //global scaling of functions
+    //Flags
+    bool integralSeamless;  //Whether to do full translational seamless.
+    bool roundSeams;        //Whether to round seams or round singularities
+    bool verbose;           //output the integration log.
+    ```
+
+=== "Python"
+
+    ```python
+    intData.lengthRatio        #global scaling of functions
+    #Flags
+    intData.integralSeamless   #Whether to do full translational seamless.
+    intData.roundSeams         #Whether to round seams or round singularities
+    intData.verbose            #output the integration log.
+    ```
 
 ```lengthRatio``` encodes a global scale for the Poisson problem (scaling the fields uniformly), where the ratio is measured against the bounding box diagonal. Some of the other parameters are demonstrated in the other examples in this chapter. The integrator takes the original (whole) mesh, and generates a cut-mesh (in ```VMeshCut,FMeshCut```) of disc-topology. The singularities are on the boundary of this mesh, and the function can consequently be defined without branching ambiguity on its vertices, with the appropriate permutation and translation across the cut seams.
 
@@ -465,17 +615,32 @@ This subchapter demonstrates how we can create an actual polygonal mesh from the
 
 The meshing unit is independent from the integration unit, and can be potentially used with external functions. However, it is easy to pipeline iit with the integration as follows:
 
-```cpp
-//setting up mesh data from integration data
-directional::MesherData mData;
-directional::setup_mesher(meshCut[i], intData, mData);
+=== "C++"
 
-//meshing and saving
-mData.verbose = false;
-std::cout<<"Meshing N="<<N[i]<<std::endl;
-directional::mesher(meshWhole, mData, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
-std::cout<<"Done!"<<std::endl;
-```
+    ```cpp
+    //setting up mesh data from integration data
+    directional::MesherData mData;
+    directional::setup_mesher(meshCut[i], intData, mData);
+
+    //meshing and saving
+    mData.verbose = false;
+    std::cout<<"Meshing N="<<N[i]<<std::endl;
+    directional::mesher(meshWhole, mData, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+    std::cout<<"Done!"<<std::endl;
+    ```
+
+=== "Python"
+
+    ```python
+    #setting up mesh data from integration data
+    mData = dr.setup_mesher(meshCut, intData)
+
+    #meshing and saving
+    mData.verbose = False
+    print("Meshing N=" + str(N))
+    VPolyMesh, DPolyMesh, FPolyMesh = dr.mesher(meshWhole, mData)
+    print("Done!")
+    ```
 
 This reads the integrated information from `intData`. Conversely to previous version, the mesher does not necessarily need an external dependency. Nevertheless, it can optionally be sped up (considerably) by including <a href=https://gmplib.org/>GMP</a>. This is controlled by CMake within the compilation of the tutorial.
 
@@ -498,21 +663,42 @@ What is called "face-based FEM" is in fact just the structure with face-based ve
 
 Which is popular in geometry processing (for instance, studied extensively in [[Wardetzky 2007](#Wardetzky2007)]. This is exemplified in the following code:
 
-```cpp
-Eigen::SparseMatrix<double> Gv = directional::conf_gradient_matrix_2D<double>(mesh);
-Eigen::SparseMatrix<double> Ge = directional::non_conf_gradient_matrix_2D<double>(mesh);
-Eigen::SparseMatrix<double> J =  directional::face_vector_rotation_matrix_2D<double>(mesh);
-◊
-Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh);
-Eigen::SparseMatrix<double> D = directional::div_matrix_2D<double>(mesh);
-```
+=== "C++"
+
+    ```cpp
+    Eigen::SparseMatrix<double> Gv = directional::conf_gradient_matrix_2D<double>(mesh);
+    Eigen::SparseMatrix<double> Ge = directional::non_conf_gradient_matrix_2D<double>(mesh);
+    Eigen::SparseMatrix<double> J =  directional::face_vector_rotation_matrix_2D<double>(mesh);
+    ◊
+    Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh);
+    Eigen::SparseMatrix<double> D = directional::div_matrix_2D<double>(mesh);
+    ```
+
+=== "Python"
+
+    ```python
+    Gv = dr.conf_gradient_matrix_2D(mesh)
+    Ge = dr.non_conf_gradient_matrix_2D(mesh)
+    J = dr.face_vector_rotation_matrix_2D(mesh)
+    C = dr.curl_matrix_2D(mesh)
+    D = dr.div_matrix_2D(mesh)
+    ```
 
 `Ge` is the non-conforming (Edge-based) cogradient, and `J` is the in-face rotation matrix. The code proceeds by verifying the cochain relations (discrete curl of gradient and divergence of rotated cogradient):
 
-```cpp
-std::cout<<"max abs curl of exact field (should be numerically zero): "<<(C*Gv*confVec).cwiseAbs().maxCoeff()<<std::endl;
-std::cout<<"max abs divergence of coexact field (should be numerically zero): "<<(D*J*Ge*nonConfVec).cwiseAbs().maxCoeff()<<std::endl;
-```
+=== "C++"
+
+    ```cpp
+    std::cout<<"max abs curl of exact field (should be numerically zero): "<<(C*Gv*confVec).cwiseAbs().maxCoeff()<<std::endl;
+    std::cout<<"max abs divergence of coexact field (should be numerically zero): "<<(D*J*Ge*nonConfVec).cwiseAbs().maxCoeff()<<std::endl;
+    ```
+
+=== "Python"
+
+    ```python
+    print("max abs curl of exact field (should be numerically zero):", np.max(np.abs(C@Gv@confVec)))
+    print("max abs divergence of coexact field (should be numerically zero):", np.max(np.abs(D@J@Ge@nonConfVec)))
+    ```
 
 ![Example 6-1](images/601_FaceBasedFEM.png)<p align=center><em>Left: a conforming PL function with its gradient. Right: a non-conforming PL function with its rotated cogradient.</em></p>
 
@@ -524,30 +710,51 @@ DEC [[Desbrun et al. 2005](#Desbrun2005)] is primarily working with differential
 
 The *sharp* operator converts the discrete forms into their continuous counterparts, which in the PL case are Whitney forms (for instance, for $0$-forms it's just PL functions, as illustrated above). These can be used to create the mass matrices $M_0,M_1,M_2$ to be served as Hodge stars. However, it is sometimes preferred to lump $M_1$ to the primal/dual hodge star $\star_1$, since it provides an easy inverse, albeit less accurate in some interpretations. Directional offers both options:
 
-```cpp
-Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(mesh);
-Eigen::SparseMatrix<double> d1 = directional::d1_matrix<double>(mesh);
-Eigen::SparseMatrix<double> hodgeStar, invHodgeStar;
-directional::hodge_star_1_matrix(mesh, hodgeStar, invHodgeStar);
-Eigen::SparseMatrix<double> M1;
-directional::linear_whitney_mass_matrix(mesh, M1);
+=== "C++"
 
-Eigen::SparseMatrix<double> L1 = d0.adjoint()*M1*d0;
-Eigen::SparseMatrix<double> L2 = d0.adjoint()*hodgeStar*d0;
-Eigen::SparseMatrix<double> diff = L1-L2;
+    ```cpp
+    Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(mesh);
+    Eigen::SparseMatrix<double> d1 = directional::d1_matrix<double>(mesh);
+    Eigen::SparseMatrix<double> hodgeStar, invHodgeStar;
+    directional::hodge_star_1_matrix(mesh, hodgeStar, invHodgeStar);
+    Eigen::SparseMatrix<double> M1;
+    directional::linear_whitney_mass_matrix(mesh, M1);
 
-double maxAbsValue = 0.0;
-for (int k = 0; k < diff.outerSize(); ++k)
-    for (Eigen::SparseMatrix<double>::InnerIterator it(diff, k); it; ++it)
-        maxAbsValue = std::max(maxAbsValue, std::abs(it.value()));
+    Eigen::SparseMatrix<double> L1 = d0.adjoint()*M1*d0;
+    Eigen::SparseMatrix<double> L2 = d0.adjoint()*hodgeStar*d0;
+    Eigen::SparseMatrix<double> diff = L1-L2;
 
-std::cout<<"Exact laplacian identity (should be numerically zero): "<<maxAbsValue<<std::endl;
-directional::project_exact(d1, hodgeStar, z2, z1Diag, z2Exact, true);
-std::cout<<"Reproducing the original curl (z2Diag, should be numerically zero): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
-directional::project_exact(d1, M1, z2, z1, z2Exact, true);
-std::cout<<"Reproducing the original curl (z2, should be numerically zero): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
-std::cout<<"Difference between z1 and z1Diag (small, not zero): "<<(z1-z1Diag).cwiseAbs().maxCoeff()<<std::endl;
-```
+    double maxAbsValue = 0.0;
+    for (int k = 0; k < diff.outerSize(); ++k)
+        for (Eigen::SparseMatrix<double>::InnerIterator it(diff, k); it; ++it)
+            maxAbsValue = std::max(maxAbsValue, std::abs(it.value()));
+
+    std::cout<<"Exact laplacian identity (should be numerically zero): "<<maxAbsValue<<std::endl;
+    directional::project_exact(d1, hodgeStar, z2, z1Diag, z2Exact, true);
+    std::cout<<"Reproducing the original curl (z2Diag, should be numerically zero): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
+    directional::project_exact(d1, M1, z2, z1, z2Exact, true);
+    std::cout<<"Reproducing the original curl (z2, should be numerically zero): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
+    std::cout<<"Difference between z1 and z1Diag (small, not zero): "<<(z1-z1Diag).cwiseAbs().maxCoeff()<<std::endl;
+    ```
+
+=== "Python"
+
+    ```python
+    d0 = dr.d0_matrix(mesh)
+    d1 = dr.d1_matrix(mesh)
+    hodgeStar, invHodgeStar = dr.hodge_star_1_matrix(mesh)
+    M1 = dr.linear_whitney_mass_matrix(mesh)
+
+    L1 = d0.T@M1@d0
+    L2 = d0.T@hodgeStar@d0
+    print("Exact laplacian identity (should be numerically zero):", abs(L1-L2).max())
+
+    z1Diag, z2Exact = dr.project_exact(d1, hodgeStar, z2, gaugeFixing=True)
+    print("Reproducing the original curl (z2Diag, should be numerically zero):", np.max(np.abs(z2-z2Exact)))
+    z1, z2Exact = dr.project_exact(d1, M1, z2, gaugeFixing=True)
+    print("Reproducing the original curl (z2, should be numerically zero):", np.max(np.abs(z2-z2Exact)))
+    print("Difference between z1 and z1Diag (small, not zero):", np.max(np.abs(z1-z1Diag)))
+    ```
 
 The differences will only be culminated in the last `z1` vs. `z1Diag`. Other than the functions to construct the operators, this also introduces the `project_exact()` function which we discuss in the next tutorial example.
 
