@@ -2,3 +2,32 @@ figcaption
 {
   font-style: italic;
 }
+
+/* Language buttons in the header (docs/js/language.js), which replace the labels of the code tabs */
+.lang-button
+{
+  border: 2px solid white;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 3px 6px;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+.lang-button-inactive
+{
+  opacity: 0.45;
+}
+
+.lang-button-inactive:hover
+{
+  opacity: 1.0;
+}
+
+.tabbed-set > .tabbed-labels
+{
+  display: none;
+}
