@@ -11,12 +11,26 @@ This version marks the biggest change from previous versions, in which it stops 
 There are other considerable changes; check the [Release history](https://avaxman.github.io/Directional/RELEASE_HISTORY/).
 
 ## Installation
-Directional is a header-only library where each file generally includes one function. To use the library, simply add the _include_ directory to your include path and make sure Directional and its prerequisites are set up properly. After that you can include any files you need normally, using for example `#include <directional/index_prescription.h>`.
+=== "C++"
 
-To get the library, simply clone the repository using:
-```git
-git clone --recursive https://github.com/avaxman/Directional.git
-```
+    Directional is a header-only library where each file generally includes one function. To use the library, simply add the _include_ directory to your include path and make sure Directional and its prerequisites are set up properly. After that you can include any files you need normally, using for example `#include <directional/index_prescription.h>`.
+
+    To get the library, simply clone the repository using:
+    ```git
+    git clone --recursive https://github.com/avaxman/Directional.git
+    ```
+
+=== "Python"
+
+    Directional can also be used from Python, with the same functions, arguments and default values as in C++. The bindings are in the `python` folder. To install them, clone the repository and install the package from the main Directional folder:
+    ```bash
+    git clone --recursive https://github.com/avaxman/Directional.git
+    cd Directional
+    pip install ./python
+    ```
+    This builds the bindings with your C++ compiler (C++20 is required), and installs `numpy` and `scipy`. Output arguments are return values (functions with several outputs return a tuple), Eigen matrices are NumPy arrays, and sparse matrices are `scipy.sparse` matrices. The viewer functions (`directional.viewer`) and the examples use [polyscope](https://polyscope.run/py/), which is installed with `pip install polyscope`.
+
+    Meshing uses exact arithmetic in [GMP](https://gmplib.org/), so it is only built when GMP is found, for instance from `brew install gmp` or `apt install libgmp-dev`. A different GMP installation can be given with the `GMP_DIR` environment variable.
 
 ## Features
 The current version is 2.0, which represents a big paradigm shift from previous versions. Namely, the library uses polymorphic classes to represent abstract discrete tangent bundles, and contains their impelmentations of these interfaces by finite elements on meshes. The library further comprises the following features
