@@ -51,15 +51,28 @@ header file contains a single function (e.g. `igl/index_prescription.h` contains
 `igl::index_prescription()`). The library is only dependent on [Eigen]
 
 ## Tutorial
-A [Tutorial](https://avaxman.github.io/Directional/tutorial/) that walks through the entire functionality of Directional is available. To compile it, go to the `tutorial` folder, open a shell and call:
+A [Tutorial](https://avaxman.github.io/Directional/tutorial/) that walks through the entire functionality of Directional is available.
 
-```
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release ../
-make
-```
-This should properly set up the tutorial project, with the individual chapters as subprojects, and create project makefiles upon which you can build it using your favourite compiler. For windows, we recommend to use `cmake-gui ..` and follow the instructions to create a compilable Visual Studio file.
+=== "C++"
+
+    To compile it, go to the `tutorial` folder, open a shell and call:
+
+    ```
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release ../
+    make
+    ```
+    This should properly set up the tutorial project, with the individual chapters as subprojects, and create project makefiles upon which you can build it using your favourite compiler. For windows, we recommend to use `cmake-gui ..` and follow the instructions to create a compilable Visual Studio file.
+
+=== "Python"
+
+    To run an example, open a shell in the main Directional folder and call:
+
+    ```bash
+    python python/examples/202_sampling.py
+    ```
+    The Python versions of the tutorial examples are in `python/examples`, with the same names and numbers as in C++. They read the data from the `tutorial/data` folder.
 
 ## Python
 Directional can also be used from Python, with the same functions and the Python versions of the tutorial examples; see [Python bindings](python.md).
