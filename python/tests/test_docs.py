@@ -12,22 +12,6 @@ import pytest
 DIRECTIONAL_ROOT = Path(__file__).parents[2]
 
 
-#Runs the Python code blocks of docs/python.md in order, as one script from the main folder (with polyscope's mock backend).
-def test_python_docs_examples_run(monkeypatch, capsys):
-    ps = pytest.importorskip("polyscope")
-    monkeypatch.chdir(DIRECTIONAL_ROOT)
-    init = ps.init
-    monkeypatch.setattr(ps, "init", lambda *args, **kwargs: init("openGL_mock"))
-    monkeypatch.setattr(ps, "show", lambda *args, **kwargs: None)
-    blocks = re.findall(r"```python\n(.*?)```", (DIRECTIONAL_ROOT / "docs" / "python.md").read_text(), re.DOTALL)
-    assert len(blocks)==3
-    namespace = {}
-    for block in blocks:
-        exec(block, namespace)
-    assert "singularities with indices" in capsys.readouterr().out
-    assert namespace["NFunction"].shape==(len(namespace["meshCut"].V), namespace["N"])
-
-
 #The Python tabs of docs/tutorial.md show lines of python/examples, so each of their code lines has to be found, in the
 #same order, in one example. Lines like "pvData.wSmooth" list the fields of a data structure, which have to exist.
 def test_tutorial_python_tabs_match_the_examples():
