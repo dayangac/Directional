@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="favicon.ico">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -29,10 +29,10 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -656,10 +656,25 @@
 <p>This version marks the biggest change from previous versions, in which it stops depending on both <a href="https://libigl.github.io/">Libigl</a> and <a href="https://www.cgal.org/">CGAL</a>, making it much more independent, lightweight, and easy to maintain. Directional now only depends directly on <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen</a> and <a href="https://polyscope.run/">PolyScope</a>. Both are bundled in. There is an optional dependency on <a href="https://gmplib.org/">GMP</a> just for the Mesher package, but the Mesher can work without it (albeit slower).</p>
 <p>There are other considerable changes; check the <a href="https://avaxman.github.io/Directional/RELEASE_HISTORY/">Release history</a>.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">C++</label><label for="__tabbed_1_2">Python</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <p>Directional is a header-only library where each file generally includes one function. To use the library, simply add the <em>include</em> directory to your include path and make sure Directional and its prerequisites are set up properly. After that you can include any files you need normally, using for example <code>#include &lt;directional/index_prescription.h&gt;</code>.</p>
 <p>To get the library, simply clone the repository using:
 <div class="highlight"><pre><span></span><code>git clone --recursive https://github.com/avaxman/Directional.git
 </code></pre></div></p>
+</div>
+<div class="tabbed-block">
+<p>Directional can also be used from Python, with the same functions, arguments and default values as in C++. The bindings are in the <code>python</code> folder. To install them, clone the repository and install the package from the main Directional folder:
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/avaxman/Directional.git
+<span class="nb">cd</span><span class="w"> </span>Directional
+pip<span class="w"> </span>install<span class="w"> </span>./python
+</code></pre></div>
+This builds the bindings with your C++ compiler (C++20 is required), and installs <code>numpy</code> and <code>scipy</code>. Output arguments are return values (functions with several outputs return a tuple), Eigen matrices are NumPy arrays, and sparse matrices are <code>scipy.sparse</code> matrices. The viewer functions (<code>directional.viewer</code>) and the examples use <a href="https://polyscope.run/py/">polyscope</a>, which is installed with <code>pip install polyscope</code>.</p>
+<p>Meshing uses exact arithmetic in <a href="https://gmplib.org/">GMP</a>, so it is only built when GMP is found, for instance from <code>brew install gmp</code> or <code>apt install libgmp-dev</code>. A different GMP installation can be given with the <code>GMP_DIR</code> environment variable.</p>
+</div>
+</div>
+</div>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <p>The current version is 2.0, which represents a big paradigm shift from previous versions. Namely, the library uses polymorphic classes to represent abstract discrete tangent bundles, and contains their impelmentations of these interfaces by finite elements on meshes. The library further comprises the following features</p>
 <ol>
@@ -678,13 +693,26 @@ just include directional headers (e.g. <code>#include &lt;directional/index_pres
 header file contains a single function (e.g. <code>igl/index_prescription.h</code> contains
 <code>igl::index_prescription()</code>). The library is only dependent on [Eigen]</p>
 <h2 id="tutorial">Tutorial<a class="headerlink" href="#tutorial" title="Permanent link">&para;</a></h2>
-<p>A <a href="https://avaxman.github.io/Directional/tutorial/">Tutorial</a> that walks through the entire functionality of Directional is available. To compile it, go to the <code>tutorial</code> folder, open a shell and call:</p>
+<p>A <a href="https://avaxman.github.io/Directional/tutorial/">Tutorial</a> that walks through the entire functionality of Directional is available.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">C++</label><label for="__tabbed_2_2">Python</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>To compile it, go to the <code>tutorial</code> folder, open a shell and call:</p>
 <p><div class="highlight"><pre><span></span><code>mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 </code></pre></div>
 This should properly set up the tutorial project, with the individual chapters as subprojects, and create project makefiles upon which you can build it using your favourite compiler. For windows, we recommend to use <code>cmake-gui ..</code> and follow the instructions to create a compilable Visual Studio file.</p>
+</div>
+<div class="tabbed-block">
+<p>To run an example, open a shell in the main Directional folder and call:</p>
+<p><div class="highlight"><pre><span></span><code>python<span class="w"> </span>python/examples/202_sampling.py
+</code></pre></div>
+The Python versions of the tutorial examples are in <code>python/examples</code>, with the same names and numbers as in C++. They read the data from the <code>tutorial/data</code> folder.</p>
+</div>
+</div>
+</div>
 <h2 id="how-to-contribute">How to Contribute<a class="headerlink" href="#how-to-contribute" title="Permanent link">&para;</a></h2>
 <p>If you are interested in joining development, please fork the repository and submit a <a href="https://help.github.com/articles/using-pull-requests/">pull request</a> with your changes.</p>
 <h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
@@ -769,12 +797,14 @@ url          = {https://doi.org/10.5281/zenodo.3338174}
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": [], "search": "assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": [], "search": "assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="assets/javascripts/bundle.c21346df.min.js"></script>
       
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+      
+        <script src="js/language.js"></script>
       
     
   </body>
