@@ -18,11 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The cibuildwheel settings are in python/pyproject.toml. On macOS, GMP has to be installed before cibuildwheel
-      # starts, since the deployment target is read off its library.
+      # The cibuildwheel settings are in python/pyproject.toml. On macOS, delocate bundles Homebrew's GMP into the wheel,
+      # so the wheel targets the macOS version GMP was built for (cibuildwheel cannot evaluate this in its environment).
       - name: Install GMP
         if: runner.os == 'macOS'
-        run: brew install gmp
+        run: |
+          brew install gmp
+          echo "MACOSX_DEPLOYMENT_TARGET=$(otool -l $(brew --prefix gmp)/lib/libgmp.dylib | awk '/minos/ {print $2; exit}')" >> $GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v4.3.1
         with:
