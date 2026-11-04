@@ -72,8 +72,11 @@ def test_principal_curvatures_match_cpp(cpp_reference):
     cpp = cpp_reference("principal_curvatures")
     mesh = dr.readOBJ(str(TUTORIAL_DATA_PATH / "torus.obj"))
     for currMesh in (mesh, dr.TriMesh(mesh.V, mesh.F)):
-        for name in ("minVertexPrincipalDirections", "maxVertexPrincipalDirections", "vertexPrincipalCurvatures"):
-            assert_matches(getattr(currMesh, name), cpp(name))
+        assert_matches(currMesh.vertexPrincipalCurvatures, cpp("vertexPrincipalCurvatures"))
+        #a principal direction has no sign, and rounding (e.g. fused multiply-add on arm64) can flip it
+        for name in ("minVertexPrincipalDirections", "maxVertexPrincipalDirections"):
+            directions, cppDirections = getattr(currMesh, name), cpp(name)
+            assert_matches(directions*np.sign(np.sum(directions*cppDirections, axis=1))[:, None], cppDirections)
 
 
 #automatic seeds are left out, since they are random on every run
