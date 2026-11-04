@@ -110,14 +110,15 @@ def test_face_bundle_interpolation_is_constant_per_face(mesh):
 
 
 @pytest.mark.parametrize("TangentBundle", VERTEX_BUNDLES)
-def test_vertex_bundle_interpolation_is_tangent_and_constant_per_face(mesh, TangentBundle):
-    #the library's interpolation is still the polyvector average at the face center
+def test_vertex_bundle_interpolation_blends_the_corner_vectors(mesh, TangentBundle):
+    #for N=1 the polyvector is the vector, so the blend is the barycentric average of the vertex vectors projected to the face
     rawField = dr.power_to_raw(dr.power_field(TangentBundle(mesh), np.array([0]), np.array([[1.0, 0.0, 0.0]]), np.array([-1.0]), 1), 1)
-    faces = np.array([0, 0, 0, 5])
-    baryCoords = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1/3, 1/3, 1/3], [0.2, 0.3, 0.5]])
+    faces = np.array([5, 0, 0, 0])
+    baryCoords = np.array([[0.2, 0.3, 0.5], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1/3, 1/3, 1/3]])
     _, normals, field = rawField.tb.interpolate(faces, baryCoords, rawField.intField)
-    np.testing.assert_allclose(np.sum(field*normals, axis=1), 0.0, atol=1e-12)
-    np.testing.assert_allclose(field[:3], np.tile(field[0], (3, 1)), atol=1e-12)
+    cornerVectors = rawField.extField[mesh.F[faces]]
+    cornerVectors -= np.einsum("skx,sx->sk", cornerVectors, normals)[:, :, None]*normals[:, None, :]
+    np.testing.assert_allclose(field, np.einsum("sk,skx->sx", baryCoords, cornerVectors), atol=1e-12)
 
 
 def test_bundle_methods_reject_bad_input(mesh):

@@ -249,7 +249,7 @@ public:
             
             for (int j = 0; j < 3; j++) {
                 interpSources.row(i).array() += mesh->V.row(mesh->F(faceIndices(i), j)).array() * baryCoords(i, j);
-                interpPV.row(i).array() += pvDirectionals.row(mesh->F(faceIndices(i), j)).array() * baryCoords(i, j);
+                interpPV.row(i).array() += pvDirectionals.row(3*faceIndices(i)+j).array() * baryCoords(i, j);
             }
             
             interpNormals.row(i) = mesh->faceNormals.row(faceIndices(i));
@@ -269,7 +269,7 @@ public:
         for (int i=0;i<faceIndices.rows();i++)
             //This is on faces, so using face-based base
             for (int j=0;j<N;j++)
-                interpField.block(i,j*3,1,3)=interpFieldInt(faceIndices(i),j).real()*mesh->FBx.row(faceIndices(i))+interpFieldInt(faceIndices(i),j).imag()*mesh->FBy.row(faceIndices(i));
+                interpField.block(i,j*3,1,3)=interpFieldInt(i,j).real()*mesh->FBx.row(faceIndices(i))+interpFieldInt(i,j).imag()*mesh->FBy.row(faceIndices(i));
         
     }
 };
